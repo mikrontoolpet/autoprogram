@@ -10,7 +10,7 @@ class WorkBook:
         """
         self.wb = pd.read_excel(path, sheet_name=None)
      
-    def lookup(self, sheet_name, arg_col, arg, res_col):
+    def lookup(self, sheet_name, arg_col, arg_val, res_col):
         """
         lookup method
         """
@@ -21,7 +21,7 @@ class WorkBook:
         try:
             sh[arg_col] = sh[arg_col].astype("float64")
             sh[res_col] = sh[res_col].astype("string")
-            filt = (sh[arg_col] <= arg)
+            filt = (sh[arg_col] <= arg_val)
             if (~filt).all():
                 raise ValueError("No argument in the worksheet")
             rev_filt = filt[::-1] # in order to find the index of the LAST occurence of True value with idxmax() method
@@ -33,7 +33,7 @@ class WorkBook:
         except ValueError:
             raise ValueError(f"Could not convert column to float or no argument in the worksheet")
 
-    def trend(self, sheet_name, arg_col, arg, res_col):
+    def trend(self, sheet_name, arg_col, arg_val, res_col):
         """
         trend method
         """
@@ -45,7 +45,7 @@ class WorkBook:
             arg_ser = sh[arg_col].astype("float64")
             res_ser = sh[res_col].astype("float64")
             f = interpolate.interp1d(arg_ser, res_ser)
-            res = f(arg)
+            res = f(arg_val)
             return res
         except KeyError:
             raise ValueError(f"No {arg_col} or {res_col} column in the worbook {self.wb}")

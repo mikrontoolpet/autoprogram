@@ -1,4 +1,4 @@
-from autoprogram.tools import *
+from autoprogram import tools
 
 class App:
 	async def run(args):
@@ -6,8 +6,8 @@ class App:
 		family = args.family[0]
 		params = args.params
 		family_dict = {}
-		for T in (drills.drills.Titanium,): # new tool classes must be added here
+		for T in (tools.drills.drills.Titanium,): # new tool classes must be added here
 			family_dict[T.family_address] = T
 		Tool = family_dict[family]
-		tool = Tool(*params)
-		await tool.create(name)
+		async with Tool(name, *params) as tool:
+			await tool.create()
