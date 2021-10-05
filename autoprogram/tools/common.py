@@ -1,13 +1,14 @@
+import re
 from pathlib import Path
 
-from autoprogram.vgpprogram import VgpProgram
+from autoprogram.vgpro import VgpClient
 from autoprogram import config
 
 
-class Tool:
+class Tool():
     def __init__(self, name, family_address):
         self.name = name
-        self.vgp = VgpProgram(config.SERVER_URL)
+        self.vgpc = VgpClient(config.SERVER_URL)
         self.master_prog_path = Path(config.MASTER_PROGS_BASE_DIR).joinpath(family_address, config.MASTER_PROG_NAME + config.VGP_SUFFIX)
         self.res_prog_path = Path(config.RES_PROGS_DIR).joinpath(name + config.VGP_SUFFIX)
 
@@ -17,9 +18,9 @@ class Tool:
         1) Load the correct master program
         2) Save the program on the local machine
         """
-        await self.vgp.__aenter__()
-        await self.vgp.load_tool(self.master_prog_path)
-        await self.vgp.save_tool(self.res_prog_path)
+        await self.vgpc.__aenter__()
+        await self.vgpc.load_tool(self.master_prog_path)
+        await self.vgpc.save_tool(self.res_prog_path)
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -28,9 +29,9 @@ class Tool:
         1) Save the program
         2) Close the file
         """
-        await self.vgp.save_tool(self.res_prog_path)
-        await self.vgp.close_file()
-        await self.vgp.__aexit__(exc_type, exc_value, traceback)
+        await self.vgpc.save_tool(self.res_prog_path)
+        await self.vgpc.close_file()
+        await self.vgpc.__aexit__(exc_type, exc_value, traceback)
 
     def check_boundary(self, arg, low_bound, up_bound):
         """
@@ -40,11 +41,24 @@ class Tool:
         if arg < low_bound or arg > up_bound:
             self.error_list(0)
 
+    @staticmethod
+    def to_float(raw_str):
+        """
+        Convert string to float, if possible
+        """
+        str_res  = re.sub(config.ADD_CHARS, "", raw_str)
+        try:
+            res = float(str_res)
+        except ValueError:
+            raise error_list(1)
+        return res
+
     async def delete_all_flanges(self):
         """
         Delete all flanges in order to speed up calculations
         """
-        await self.vgp.delete_all_flanges()
+        # await self.vgp.delete_all_flanges()
+        pass
 
     async def set_parameters(self):
         raise AttributeError("Tool object without set_parameters(self) method")
@@ -65,4 +79,6 @@ class Tool:
         In case of error
         """
         if err_id == 0:
-            print("The input argument is out of boundary.")
+            return ValueError("The input argument is out of boundary.")
+        if err_id == 1:
+            return ValueError("Value not convertible to float.")

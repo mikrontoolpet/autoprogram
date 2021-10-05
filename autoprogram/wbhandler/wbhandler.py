@@ -51,8 +51,8 @@ class WorkBook:
         In case of error
         """
         if err_id == 0:
-            print("No argument in the sheet.")
+            return IndexError("No argument in the sheet.")
         elif err_id == 1:
-            print("No sheet or column in the workbook.")
+            return IndexError("No sheet or column in the workbook.")
         elif err_id == 2:
-            print("Could not convert column to float or no argument in the worksheet.")
+            return ValueError("Could not convert column to float or no argument in the worksheet.")

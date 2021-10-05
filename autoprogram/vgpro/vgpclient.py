@@ -1,10 +1,9 @@
-import re
-
 from asyncua import Client, ua
 from pathlib import Path
-from autoprogram.vgpprogram.misc import ApplicationStateHandler, wait_till_ready
+from autoprogram.vgpro.misc import ApplicationStateHandler, wait_till_ready
 
-class VgpProgram:
+
+class VgpClient:
     def __init__(self, url):
         """
         Create an instance of the Client class
@@ -48,8 +47,13 @@ class VgpProgram:
     @wait_till_ready
     async def save_tool(self, raw_path):
         """
-        Method that saves the .vgp file with the specified filename
+        Method that saves the .vgp file with the specified filename. If
+        the specified path already exists, the file is deleted before beeing
+        resaved, otherwise VgPro raises an error.
         """
+        pthl_path = Path(raw_path)
+        if pthl_path.is_file():
+            pthl_path.unlink()
         str_path = str(raw_path)
         ua_str_path = ua.Variant(str_path, ua.VariantType.String)
         parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
@@ -94,12 +98,9 @@ class VgpProgram:
         left as a raw string
         """
         node = self.client.get_node(nodeid)
-        raw_str_val = await node.read_value()
-        str_val = re.sub("[^-.0-9]", "",raw_str_val)
-        try:
-            res = float(str_val)
-        except ValueError:
-            res = raw_str_val
+        ua_type = await node.read_data_type_as_variant_type()
+        ua_val = await node.read_value()
+        res = str(ua_val)
         return res
 
     @wait_till_ready
@@ -108,22 +109,34 @@ class VgpProgram:
         Set the value after formatting the input to the correct opc-ua
         data type:
         1) Get the right opc-ua type to which the input value must be formatted
-        2) Since python float and int types cannot be formatted to
-           ua.VariantType.String (an AttributeError is thrown), when the
-           Exception is raised, the raw input value is converted to str
-           before being formatted to ua.VariantType.String
-        3) Try to format the input value (int or float) with the correct opc-ua
-           type (ua.VariantType.Int or ua.VariantType.Double, respectively)
-        4) If an AttributeErrore is raised, it formats the input value as
-           ua.VariantType.String (not necessary, since python str already
-           fits the correspondent ua string
+        2) Depending on the target OPC-UA type, the raw value is converted
+           from python native type to OPC-UA type
         """
         node = self.client.get_node(nodeid) # get the specified node object
         ua_type = await node.read_data_type_as_variant_type()
         try:
-            ua_val = ua.Variant(raw_val, ua_type)
+            if ua_type == ua.VariantType.Int32:
+                int_val = int(raw_val)
+                ua_val = ua.Variant(int_val, ua_type)
+            elif ua_type == ua.VariantType.Double:
+                float_val = float(raw_val)
+                ua_val = ua.Variant(float_val, ua_type)
+            elif ua_type == ua.VariantType.String:
+                str_val = str(raw_val)
+                ua_val = ua.Variant(str_val, ua_type)
+            else:
+                raise self.error_list(0)
             await node.write_value(ua_val)
-        except AttributeError:
-            raw_str_val = str(raw_val)
-            ua_val = ua.Variant(raw_str_val, ua_type)
-            await node.write_value(ua_val)
+        except ValueError:
+            raise self.error_list(1)
+        
+    def error_list(self, err_id):
+        """
+        In case of error
+        """
+        if err_id == 0:
+            return TypeError("Python type not compatible with UA type.")
+        elif err_id == 1:
+            return ValueError("Value not suitable for OPC-UA type formatting.")
+        # elif err_id == 2:
+        #     print("Could not convert column to float or no argument in the worksheet.")
