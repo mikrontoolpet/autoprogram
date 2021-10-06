@@ -8,15 +8,16 @@ class Titanium(Tool):
     Titanium drill class
     """
     """
-    The class variable "family_address" must be equal to both:
+    The class variable "family_address" is necessary and must be equal
+    to both:
     1) The relative path between the master programs base directory and the
        master program directory itself
     2) The relative module path between the module "tools" and this class
     """
     family_address = "drills/drills/Titanium"
 
-    def __init__(self, name, diam, fl_len, lead):
-        super().__init__(name, Titanium.family_address)
+    def __init__(self, vgp_client, name, diam, fl_len, lead):
+        super().__init__(vgp_client, name, Titanium.family_address)
         self.diam = float(diam)
         self.fl_len = float(fl_len)
         self.lead = float(lead)

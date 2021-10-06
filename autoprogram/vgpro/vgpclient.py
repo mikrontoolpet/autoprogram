@@ -1,7 +1,13 @@
+import asyncio
+import logging
+
 from asyncua import Client, ua
 from pathlib import Path
-from autoprogram.vgpro.misc import ApplicationStateHandler, wait_till_ready
+from autoprogram.vgpro.misc import ConnectionState, ApplicationStateHandler, wait_till_ready
 
+# Set logging level to ERROR in order to silence warning messages from asyncua
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
 
 class VgpClient:
     def __init__(self, url):
@@ -15,15 +21,43 @@ class VgpClient:
         Append the subscription to the application state node
         after the Client __aenter__method
         """
-        await self.client.__aenter__()
+        ready_to_connect = 0
+        await self.wait_for_connection()
         await self.create_data_change_subscription("ns=2;s=ProgramMetadata/ApplicationState", ApplicationStateHandler())
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """
-        Just call the self.Client __aexit__ method
+        Just call the self.client __aexit__ method
         """
         await self.client.__aexit__(exc_type, exc_value, traceback)
+
+    async def _wait_for_connection(self):
+        """
+        This method tries to connect to the OPC-UA server started from the
+        VgPro application, until the connection is succesful
+        """
+        ready_to_connect = ConnectionState.down
+        while ready_to_connect != ConnectionState.up:
+            try:
+                await self.client.__aenter__()
+                ready_to_connect = ConnectionState.up
+            except ConnectionRefusedError:
+                pass
+            except ua.uaerrors._auto.BadServerHalted:
+                pass
+
+
+    async def wait_for_connection(self, timeout=60):
+        """
+        This method calls self._wait_for_connection() with a timeout, if
+        the timout is exceeded, a TimeoutError is raised.
+        """
+        try:
+            await asyncio.wait_for(self._wait_for_connection(), timeout)
+        except asyncio.TimeoutError:
+            raise self.error_list(2)
+
 
     @wait_till_ready
     async def create_data_change_subscription(self, nodeid, handler, sub_period=100):
@@ -138,5 +172,5 @@ class VgpClient:
             return TypeError("Python type not compatible with UA type.")
         elif err_id == 1:
             return ValueError("Value not suitable for OPC-UA type formatting.")
-        # elif err_id == 2:
-        #     print("Could not convert column to float or no argument in the worksheet.")
+        elif err_id == 2:
+            return TimeoutError("Connection attempt took too long, program ends.")

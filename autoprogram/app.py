@@ -15,45 +15,52 @@ class App:
 		"""
 		Main method
 		"""
-		machine = args.machine[0]
-		with VgPro(config.VGPRO_PATH, machine) as vgp:
-			print(f"Waiting for {config.VGPRO_PATH} to start...", flush=True)
-			await asyncio.sleep(20)
-			print(f"{config.VGPRO_PATH} started!", flush=True)
+		machine = args.machine[0] # machine can be specified only here
+		async with VgPro(config.VGPRO_EXE_PATH, machine, config.SERVER_URL) as vgp_client:
 			try:
-				mode = args.mode[0]
 				# Initialize all available tool classes
 				cls.family_dict = {}
 				for T in (tools.drills.drills.Titanium,): # new tool classes must be added here
 					cls.family_dict[T.family_address] = T
+
+				# Different tool creation methods depending on the mode parameter
+				mode = args.mode[0]
 				if mode == "create_manual":
-					name = args.name[0]
-					family = args.family[0]
-					params = args.params
-					await cls.create_tool(name, family, params)
+					await cls.create_manual(vgp_client, args)
 				elif mode == "create_auto":
-					create_file_path = args.create_file_path[0]
-					sh = pd.read_excel(create_file_path, sheet_name=0)
-					for idx, row in sh.iterrows():
-						family = row.loc["family"]
-						name = row.loc["name"]
-						params = row.filter(like="params").tolist()
-						res = await cls.create_tool(name, family, params)
+					await cls.create_auto(vgp_client, args)
 				else:
 					cls.error_list(0)
 			except RuntimeError:
 				cls.error_list(1)
 
 	@classmethod
-	async def create_tool(cls, name, family, params):
+	async def create_tool(cls, vgp_client, name, family, params):
 		"""
 		Create tool from name, family and a variable number of parameters,
 		depending on how many arguments are needed by the class representing
 		the tool.
 		"""
-		Tool = cls.family_dict[family]
-		async with Tool(name, *params) as tool:
-			res = await tool.create()
+		ToolFamily = cls.family_dict[family]
+		async with ToolFamily(vgp_client, name, *params) as tool:
+			await tool.create()
+
+	@classmethod
+	async def create_manual(cls, vgp_client, args):
+		name = args.name[0]
+		family = args.family[0]
+		params = args.params
+		await cls.create_tool(vgp_client, name, family, params)
+
+	@classmethod
+	async def create_auto(cls, vgp_client, args, row):
+		create_file_path = args.create_file_path[0]
+		sh = pd.read_excel(create_file_path, sheet_name=0)
+		for idx, row in sh.iterrows():
+			family = row.loc["family"]
+			name = row.loc["name"]
+			params = row.filter(like="params").tolist()
+			await cls.create_tool(vgp_client, name, family, params)
 
 	@classmethod
 	def error_list(cls, err_id):

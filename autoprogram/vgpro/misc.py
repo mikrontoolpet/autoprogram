@@ -1,5 +1,6 @@
 import asyncio
 
+
 class ApplicationState:
 	"""
 	This class contain class variables
@@ -10,6 +11,16 @@ class ApplicationState:
 	ready = 1
 	processing = 2
 	waiting = 3
+
+
+class ConnectionState:
+    """
+    This class contain class variables
+    corresponding to more readable
+    opc server connection states
+    """
+    down = 0
+    up = 1
 
 
 class ApplicationStateHandler(object):

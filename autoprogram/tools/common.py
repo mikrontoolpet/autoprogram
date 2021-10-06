@@ -6,32 +6,30 @@ from autoprogram import config
 
 
 class Tool():
-    def __init__(self, name, family_address):
+    def __init__(self, vgp_client, name, family_address):
         self.name = name
-        self.vgpc = VgpClient(config.SERVER_URL)
+        self.vgpc = vgp_client
         self.master_prog_path = Path(config.MASTER_PROGS_BASE_DIR).joinpath(family_address, config.MASTER_PROG_NAME + config.VGP_SUFFIX)
         self.res_prog_path = Path(config.RES_PROGS_DIR).joinpath(name + config.VGP_SUFFIX)
 
     async def __aenter__(self):
         """
-        Append other operations after the vgp.__aenter__method:
+        This __aenter__() method performs the following tasks:
         1) Load the correct master program
         2) Save the program on the local machine
         """
-        await self.vgpc.__aenter__()
         await self.vgpc.load_tool(self.master_prog_path)
         await self.vgpc.save_tool(self.res_prog_path)
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """
-        Append two operations before calling the vgp.__aexit__() method
+        This __aexit__() method performs the following tasks:
         1) Save the program
         2) Close the file
         """
         await self.vgpc.save_tool(self.res_prog_path)
         await self.vgpc.close_file()
-        await self.vgpc.__aexit__(exc_type, exc_value, traceback)
 
     def check_boundary(self, arg, low_bound, up_bound):
         """
