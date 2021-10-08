@@ -48,15 +48,14 @@ class Tool():
         try:
             res = float(str_res)
         except ValueError:
-            raise error_list(1)
+            self.error_list(1)
         return res
 
     async def delete_all_flanges(self):
         """
         Delete all flanges in order to speed up calculations
         """
-        # await self.vgp.delete_all_flanges()
-        pass
+        await self.vgp.delete_all_flanges()
 
     async def set_parameters(self):
         raise AttributeError("Tool object without set_parameters(self) method")
@@ -68,7 +67,7 @@ class Tool():
         """
         Wrap the three methods necessary to create the tool
         """
-        await self.delete_all_flanges()
+        # await self.delete_all_flanges()
         await self.set_parameters()
         await self.set_wheels()
 
@@ -77,6 +76,6 @@ class Tool():
         In case of error
         """
         if err_id == 0:
-            return ValueError("The input argument is out of boundary.")
+            raise ValueError("The input argument is out of boundary.")
         if err_id == 1:
-            return ValueError("Value not convertible to float.")
+            raise ValueError("Value not convertible to float.")

@@ -5,9 +5,14 @@ from asyncua import Client, ua
 from pathlib import Path
 from autoprogram.vgpro.misc import ConnectionState, ApplicationStateHandler, wait_till_ready
 
+
+DEC_DIGITS = 3
+
+
 # Set logging level to ERROR in order to silence warning messages from asyncua
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
+
 
 class VgpClient:
     def __init__(self, url):
@@ -21,16 +26,19 @@ class VgpClient:
         Append the subscription to the application state node
         after the Client __aenter__method
         """
-        ready_to_connect = 0
+        print("Connecting to OPC-UA server...", flush=True)
         await self.wait_for_connection()
         await self.create_data_change_subscription("ns=2;s=ProgramMetadata/ApplicationState", ApplicationStateHandler())
+        print("Connected to OPC-UA server!", flush=True)
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """
         Just call the self.client __aexit__ method
         """
+        print("Disonnecting from OPC-UA server...", flush=True)
         await self.client.__aexit__(exc_type, exc_value, traceback)
+        print("Disconnected from OPC-UA server!", flush=True)
 
     async def _wait_for_connection(self):
         """
@@ -131,11 +139,16 @@ class VgpClient:
         to float. If the stripped string is not convertible to float, it's
         left as a raw string
         """
-        node = self.client.get_node(nodeid)
-        ua_type = await node.read_data_type_as_variant_type()
-        ua_val = await node.read_value()
-        res = str(ua_val)
-        return res
+        try:
+            print(f"Set method called with argument: {str(nodeid)}")
+            node = self.client.get_node(nodeid)
+            ua_type = await node.read_data_type_as_variant_type()
+            val = await node.read_value() # value already read with python format (e.g. float, str, ...)
+            res = str(val)
+            print(f"Parameter at {str(nodeid)} read with value {res}.")
+            return res
+        except ua.uaerrors._auto.BadNodeIdUnknown:
+            self.error_list(3) 
 
     @wait_till_ready
     async def set(self, nodeid, raw_val):
@@ -153,7 +166,7 @@ class VgpClient:
                 int_val = int(raw_val)
                 ua_val = ua.Variant(int_val, ua_type)
             elif ua_type == ua.VariantType.Double:
-                float_val = float(raw_val)
+                float_val = round(float(raw_val), DEC_DIGITS)
                 ua_val = ua.Variant(float_val, ua_type)
             elif ua_type == ua.VariantType.String:
                 str_val = str(raw_val)
@@ -161,16 +174,21 @@ class VgpClient:
             else:
                 raise self.error_list(0)
             await node.write_value(ua_val)
+            print(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.")
         except ValueError:
-            raise self.error_list(1)
+            self.error_list(1)
+        except ua.uaerrors._auto.BadNodeIdUnknown:
+            self.error_list(3)
         
     def error_list(self, err_id):
         """
         In case of error
         """
         if err_id == 0:
-            return TypeError("Python type not compatible with UA type.")
+            raise TypeError("Python type not compatible with UA type.")
         elif err_id == 1:
-            return ValueError("Value not suitable for OPC-UA type formatting.")
+            raise ValueError("Value not suitable for OPC-UA type formatting.")
         elif err_id == 2:
-            return TimeoutError("Connection attempt took too long, program ends.")
+            raise TimeoutError("Connection attempt took too long, program ends.")
+        elif err_id == 3:
+            raise ValueError(f"No such a node id: {nodeid}")

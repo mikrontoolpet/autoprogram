@@ -8,7 +8,10 @@ class WorkBook:
         Create a dictionary, whose element are pd.DataFrames
         corresponding to different worksheets
         """
-        self.wb = pd.read_excel(path, sheet_name=None)
+        try:
+            self.wb = pd.read_excel(path, sheet_name=None)
+        except FileNotFoundError:
+            self.error_list(3)
      
     def lookup(self, sheet_name, arg_col, arg_val, res_col):
         """
@@ -51,8 +54,10 @@ class WorkBook:
         In case of error
         """
         if err_id == 0:
-            return IndexError("No argument in the sheet.")
+            raise IndexError("No argument in the sheet.")
         elif err_id == 1:
-            return IndexError("No sheet or column in the workbook.")
+            raise IndexError("No sheet or column in the workbook.")
         elif err_id == 2:
-            return ValueError("Could not convert column to float or no argument in the worksheet.")
+            raise ValueError("Could not convert column to float or no argument in the worksheet.")
+        elif err_id == 3:
+            raise ValueError("Could not find the specified workbook.")

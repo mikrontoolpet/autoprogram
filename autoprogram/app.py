@@ -17,22 +17,19 @@ class App:
 		"""
 		machine = args.machine[0] # machine can be specified only here
 		async with VgPro(config.VGPRO_EXE_PATH, machine, config.SERVER_URL) as vgp_client:
-			try:
-				# Initialize all available tool classes
-				cls.family_dict = {}
-				for T in (tools.drills.drills.Titanium,): # new tool classes must be added here
-					cls.family_dict[T.family_address] = T
+			# Initialize all available tool classes
+			cls.family_dict = {}
+			for T in (tools.drills.drills.TitaniumG5,): # new tool classes must be added here
+				cls.family_dict[T.family_address] = T
 
-				# Different tool creation methods depending on the mode parameter
-				mode = args.mode[0]
-				if mode == "create_manual":
-					await cls.create_manual(vgp_client, args)
-				elif mode == "create_auto":
-					await cls.create_auto(vgp_client, args)
-				else:
-					cls.error_list(0)
-			except RuntimeError:
-				cls.error_list(1)
+			# Different tool creation methods depending on the mode parameter
+			mode = args.mode[0]
+			if mode == "create_manual":
+				await cls.create_manual(vgp_client, args)
+			elif mode == "create_auto":
+				await cls.create_auto(vgp_client, args)
+			else:
+				cls.error_list(0)
 
 	@classmethod
 	async def create_tool(cls, vgp_client, name, family, params):
@@ -41,7 +38,11 @@ class App:
 		depending on how many arguments are needed by the class representing
 		the tool.
 		"""
-		ToolFamily = cls.family_dict[family]
+		try:
+			ToolFamily = cls.family_dict[family]
+		except KeyError:
+			cls.error_list(2)
+
 		async with ToolFamily(vgp_client, name, *params) as tool:
 			await tool.create()
 
@@ -68,6 +69,8 @@ class App:
 		In case of error
 		"""
 		if err_id == 0:
-			return ValueError("The selected mode doesn't exist.")
+			raise ValueError("The selected mode doesn't exist.")
 		elif err_id == 1:
-			return TimeoutError("OPC-UA client timeout error.")
+			raise TimeoutError("OPC-UA client timeout error.")
+		elif err_id == 2:
+			raise ValueError("Specified tool family doesn't exist.")
