@@ -19,7 +19,7 @@ class App:
 		async with VgPro(config.VGPRO_EXE_PATH, machine, config.SERVER_URL) as vgp_client:
 			# Initialize all available tool classes
 			cls.family_dict = {}
-			for T in (tools.drills.drills.TitaniumG5,): # new tool classes must be added here
+			for T in (tools.drills.drills.titaniumg5.Tool,): # new tool classes must be added here
 				cls.family_dict[T.family_address] = T
 
 			# Different tool creation methods depending on the mode parameter

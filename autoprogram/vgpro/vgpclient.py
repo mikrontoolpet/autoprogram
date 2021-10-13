@@ -1,17 +1,68 @@
 import asyncio
 import logging
+import re
 
 from asyncua import Client, ua
 from pathlib import Path
-from autoprogram.vgpro.misc import ConnectionState, ApplicationStateHandler, wait_till_ready
 
 
 DEC_DIGITS = 3
+ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 
 
 # Set logging level to ERROR in order to silence warning messages from asyncua
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
+
+
+class ApplicationState:
+    """
+    This class contain class variables
+    corresponding to more readable
+    vgp application states
+    """
+    unknown = 0
+    ready = 1
+    processing = 2
+    waiting = 3
+
+
+class ConnectionState:
+    """
+    This class contain class variables
+    corresponding to more readable
+    opc server connection states
+    """
+    down = 0
+    up = 1
+
+
+class ApplicationStateHandler(object):
+    """
+    Subscription handler that sets the class variable
+    ApplicationStateHandler.app_state equal to the subscribed
+    node (the application state node)
+    """
+    app_state = 0
+    
+    def datachange_notification(self, node, val, data):
+        ApplicationStateHandler.app_state = val
+
+
+def wait_till_ready(coro):
+    """
+    Wait till ready decorator
+    """
+    async def wrapper(*args, **kwargs):
+        print("Awaiting coroutine " + coro.__name__ +  "...", flush=True)
+        res = await coro(*args, **kwargs)
+        await asyncio.sleep(0.12)
+        while ApplicationStateHandler.app_state != ApplicationState.ready:
+            # print("Application state: ", ApplicationStateHandler.app_state, flush=True)
+            await asyncio.sleep(0.12)
+        print("Coroutine " + coro.__name__ + " awaited!", flush=True)
+        return res
+    return wrapper
 
 
 class VgpClient:
@@ -124,6 +175,29 @@ class VgpClient:
         await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_int_whp_posn)
 
     @wait_till_ready
+    async def load_iso_easy(self, raw_path):
+        """
+        Method that deletes all the previous iso programs and loads the
+        specified iso easy program.
+        """
+        str_path = str(raw_path)
+        ua_str_path = ua.Variant(str_path, ua.VariantType.String)
+        parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
+        try:
+            await self.delete_all_iso()
+            await parent_node.call_method("LoadIsoEasy", ua_str_path)
+        except ua.uaerrors._auto.Bad:
+            self.error_list(4)
+
+    @wait_till_ready
+    async def delete_all_iso(self):
+        """
+        Method that removes all iso easy programs
+        """
+        parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
+        await parent_node.call_method("DeleteAllIso")
+
+    @wait_till_ready
     async def close_file(self):
         """
         Method that closes the .vgp file
@@ -134,43 +208,59 @@ class VgpClient:
     @wait_till_ready
     async def get(self, nodeid):
         """
-        Get the value at the specified node id. If the value is a float,
-        additional string characters are stripped and then it's converted
-        to float. If the stripped string is not convertible to float, it's
-        left as a raw string
+        1) Read the value as it is
+        2) Try to convert to float, otherwise leave it as it is
         """
         try:
-            print(f"Set method called with argument: {str(nodeid)}")
+            print(f"Get method called with argument: {str(nodeid)}")
             node = self.client.get_node(nodeid)
             ua_type = await node.read_data_type_as_variant_type()
             val = await node.read_value() # value already read with python format (e.g. float, str, ...)
-            res = str(val)
+            vgp_str_val = str(val)
+            try:
+                res = self.vgp_str_to_float(vgp_str_val)
+            except ValueError:
+                res = vgp_str_val
             print(f"Parameter at {str(nodeid)} read with value {res}.")
             return res
         except ua.uaerrors._auto.BadNodeIdUnknown:
-            self.error_list(3) 
+            self.error_list(3)
+        except ua.uaerrors._auto.BadAttributeIdInvalid:
+            self.error_list(5)
 
     @wait_till_ready
     async def set(self, nodeid, raw_val):
         """
         Set the value after formatting the input to the correct opc-ua
         data type:
-        1) Get the right opc-ua type to which the input value must be formatted
-        2) Depending on the target OPC-UA type, the raw value is converted
-           from python native type to OPC-UA type
+        1) Convert the raw input to string value
+        2) Try to format it to a float (stripping additional chars and
+           rounding it), otherwise is left as it is
+        3) Depending on the target OPC-UA type, the value (float or string)
+           is converted to a python native suitable for the following
+           formatting to an OPC-UA type
+        4) The value is formatted to an OPC-UA type
         """
-        node = self.client.get_node(nodeid) # get the specified node object
-        ua_type = await node.read_data_type_as_variant_type()
+        str_val = str(raw_val)
         try:
+            val = self.vgp_str_to_float(str_val)
+        except ValueError:
+            val = str_val
+        node = self.client.get_node(nodeid) # get the specified node object
+        try:
+            ua_type = await node.read_data_type_as_variant_type()
             if ua_type == ua.VariantType.Int32:
-                int_val = int(raw_val)
+                int_val = int(val)
                 ua_val = ua.Variant(int_val, ua_type)
             elif ua_type == ua.VariantType.Double:
-                float_val = round(float(raw_val), DEC_DIGITS)
+                float_val = float(val)
                 ua_val = ua.Variant(float_val, ua_type)
             elif ua_type == ua.VariantType.String:
-                str_val = str(raw_val)
+                str_val = str(val)
                 ua_val = ua.Variant(str_val, ua_type)
+            elif ua_type == ua.VariantType.Boolean:
+                str_val = str(val)
+                ua_val = ua.Variant(str_val, ua_type) # ua.VariantType.Boolean supports python string type
             else:
                 raise self.error_list(0)
             await node.write_value(ua_val)
@@ -179,7 +269,26 @@ class VgpClient:
             self.error_list(1)
         except ua.uaerrors._auto.BadNodeIdUnknown:
             self.error_list(3)
-        
+        except ua.uaerrors._auto.BadAttributeIdInvalid:
+            self.error_list(5)
+
+    @wait_till_ready
+    async def calculate_cycle_time(self):
+        """
+        Method that calculates cycle time
+        """
+        parent_node = self.client.get_node("ns=2;s=Commands/Simulation")
+        await parent_node.call_method("CalculateCycleTime")
+
+    @staticmethod
+    def vgp_str_to_float(vgp_str_val):
+        str_val = re.sub(ADD_CHARS, "",vgp_str_val)
+        try:
+            res = round(float(str_val),DEC_DIGITS)
+        except ValueError:
+             raise ValueError(f"Value not convertible to float: {vgp_str_val}")
+        return res
+
     def error_list(self, err_id):
         """
         In case of error
@@ -191,4 +300,8 @@ class VgpClient:
         elif err_id == 2:
             raise TimeoutError("Connection attempt took too long, program ends.")
         elif err_id == 3:
-            raise ValueError(f"No such a node id: {nodeid}")
+            raise ValueError("Bad node id.")
+        elif err_id == 4:
+            raise ValueError("Bad iso easy path.")
+        elif err_id == 5:
+            raise ValueError("This node hasn't any type.")

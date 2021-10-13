@@ -1,10 +1,9 @@
 from pathlib import Path
-from autoprogram.tools.common import Tool
+import math
+from autoprogram.tools.common import BaseTool
 from autoprogram.wbhandler import WorkBook
-from autoprogram import config
-from autoprogram.vgpro.misc import vgp_str_to_float
 
-class TitaniumG5(Tool):
+class Tool(BaseTool):
     """
     Titanium drill class
     """
@@ -15,10 +14,10 @@ class TitaniumG5(Tool):
        master program directory itself
     2) The relative module path between the module "tools" and this class
     """
-    family_address = "drills/drills/TitaniumG5"
+    family_address = "drills/drills/titaniumg5"
 
     def __init__(self, vgp_client, name, diam, fl_len, lead):
-        super().__init__(vgp_client, name, TitaniumG5.family_address) # update class name here too!
+        super().__init__(vgp_client, name, Tool.family_address) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
         self.lead = float(lead)
@@ -44,12 +43,16 @@ class TitaniumG5(Tool):
         await self.vgpc.set("ns=2;s=tool/Tool/Reference Length (RL)", 0.75*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/End Stock Removal (dL)", 0.0579*self.diam + 0.0342)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Cutting Security Distance", 0.1685*self.diam + 0.1331)
+        delta_dl = await self.vgpc.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
 
         # Profile
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/pA", 140)
+        point_ang = 140
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/pA", point_ang)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/D0", self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/Ta0", -0.0286)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/sP1", self.fl_len - 1.833*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Straightness Diameter", 27)
+        point_len = self.diam/2*math.tan(math.radians(90 - point_ang/2))
 
         # Flute 1
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length", self.fl_len - 0.25*self.diam)
@@ -58,15 +61,17 @@ class TitaniumG5(Tool):
         # Flute 1 (G1)
         # Core diameter, rake angle and circular land width have a transition in values along the flute length
         g1_trans_len = 5*self.diam
-        g1_len = vgp_str_to_float(await self.vgpc.get("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length"))
-        g1_trans_perc = g1_trans_len/g1_len*100
+        g1_len = await self.vgpc.get("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length")
+        g1_trans_perc = (g1_trans_len - point_len)/(g1_len - point_len)*100
         g1_core_diam_perc_1 = 32
         g1_core_diam_perc_2 = 27
         g1_rake_ang_1 = 16
         g1_rake_ang_2 = 19
         g1_circ_land_width_1 = 0.8*self.diam
         g1_circ_land_width_2 = 0.75*self.diam
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Core Diameter", "(s1;0%;" + str(g1_core_diam_perc_1) + "%);(s1;" + str(g1_trans_perc) + "%;" + str(g1_core_diam_perc_2) + "%);(s1;100%;" + str(g1_core_diam_perc_2) + "%)")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Fluting Shape", "Edge Straightness;Chisel Distance;[Rake Angle];Attack Angle")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Rake Angle", "(s1;0%;" + str(g1_rake_ang_1) + "°);(s1;" + str(g1_trans_perc) + "%;" + str(g1_rake_ang_2) + "°);(s1;100%;" + str(g1_rake_ang_2) + "°)")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Measure Distance", 0)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Circular Land Width", "(s1;0%;" + str(g1_circ_land_width_1) + " mm);(s1;" + str(g1_trans_perc) + ";" + str(g1_circ_land_width_2) + " mm);(s1;100%;" + str(g1_circ_land_width_2) + " mm)")
@@ -79,16 +84,22 @@ class TitaniumG5(Tool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate", g1_feedrate)
 
         # Flute 101 (S_G1)
-        s_g1_trans_len = g1_trans_len
+        s_g1_rad_stk_rmv_perc = 2.5 # percent of diameter
+        s_g1_rad_stk_rmv = s_g1_rad_stk_rmv_perc*self.diam/100
         s_g1_trans_perc = g1_trans_perc
-        s_g1_core_diam_perc_1 = 37
-        s_g1_core_diam_perc_2 = 32
-        s_g1_att_ang = self.configuration_wb.trend("others", "diam", self.diam, "S_G1_attack_angle")
-        s_g1_rake_shift = -(((s_g1_core_diam_perc_1 - g1_core_diam_perc_1)*self.diam)/2)/100/1.25 # radial stock removal for fluting
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", s_g1_rake_shift)
+        s_g1_core_diam_perc_1 = g1_core_diam_perc_1 + 2*s_g1_rad_stk_rmv_perc
+        s_g1_core_diam_perc_2 = g1_core_diam_perc_2 + 2*s_g1_rad_stk_rmv_perc
+        rake_ang_diff = 4
+        s_g1_rake_ang_1 = g1_rake_ang_1 - rake_ang_diff
+        s_g1_rake_ang_2 = g1_rake_ang_2 - rake_ang_diff
+        s_g1_circ_land_width_1 = g1_circ_land_width_1 + s_g1_rad_stk_rmv
+        s_g1_circ_land_width_2 = g1_circ_land_width_2 + s_g1_rad_stk_rmv
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", -s_g1_rad_stk_rmv)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Core Diameter", "(s1;0%;" + str(s_g1_core_diam_perc_1) + "%);(s1;" + str(s_g1_trans_perc) + "%;" + str(s_g1_core_diam_perc_2) + "%);(s1;100%;" + str(s_g1_core_diam_perc_2) + "%)")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Attack Angle", s_g1_att_ang)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Wheel Displacement", 0)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Fluting Shape", "Edge Straightness;Chisel Distance;[Rake Angle];Attack Angle")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Angle", "(s1;0%;" + str(s_g1_rake_ang_1) + "°);(s1;" + str(s_g1_trans_perc) + "%;" + str(s_g1_rake_ang_2) + "°);(s1;100%;" + str(s_g1_rake_ang_2) + "°)")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Circular Land Width", "(s1;0%;" + str(s_g1_circ_land_width_1) + " mm);(s1;" + str(s_g1_trans_perc) + "%;" + str(s_g1_circ_land_width_2) + " mm);(s1;100%;" + str(s_g1_circ_land_width_2) + " mm)")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL Start", 0.0374*self.diam + 0.1126)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL End", 0.075*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Exit Radius", 0.25*self.diam)
@@ -101,6 +112,7 @@ class TitaniumG5(Tool):
 
         # Flute 201 (RN)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", 0.0166*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Core Diameter", 75)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Attack Angle", 30)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel Displacement", 0)
@@ -111,6 +123,7 @@ class TitaniumG5(Tool):
 
         # Flute 301 (ERF)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Rake Shift", 0)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Core Diameter", 75)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Attack Angle", 30)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Wheel Displacement", 0)
@@ -122,10 +135,11 @@ class TitaniumG5(Tool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Connection Point", "s0;90%")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", 5.633*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Core Diameter", 52.5)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Rake Angle", 0)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Measure Distance", 0)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Circular Land Width", 1.03*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Circular Land Width", round(1.03*self.diam, 3))
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL Start", 0.0374*self.diam + 0.1126)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL End", 0)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Exit Radius", 0.1*self.diam)
@@ -136,8 +150,11 @@ class TitaniumG5(Tool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Feedrate", g2_feedrate)
 
         # Step 0
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Index", -2)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Chisel Distance", 0.08*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Chisel Calculation Mode", "[Automatic];Manual")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Follow Operations/Flute 1", "[True];False")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Follow Operations/Flute 1001", "[True];False")
+        # chisel_dist = await self.vgpc.get("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Chisel Distance (Output)") # empty value during calculations!
+        # edge_angle = math.atan(chisel_dist/(self.diam/2))
 
         # Gash (TN1)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash Rotation", 0.5*self.diam - 6)
@@ -220,78 +237,79 @@ class TitaniumG5(Tool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Rake Operations/Gash 1/Virtual Profile/D", self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Rake Operations/Gash 1/Virtual Profile/dD", 0.3)
 
+        # Set 3
+        # Peeling Operation 1 (ERT)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Blank Preparation 1/Peeling Operation/Custom Profile/PS", -0.75*self.diam)
+
         # Blank
         await self.vgpc.set("ns=2;s=tool/Blank/Profile/D", self.diam)
         await self.vgpc.set("ns=2;s=tool/Blank/Profile/L", self.fl_len + 0.5*self.diam)
 
-        # Set 2
-        # Peeling Operation 1 (ERT)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Blank Preparation 1/Peeling Operation/Custom Profile/PS", -0.75*self.diam)
-
     async def set_wheels(self):
-        # Load wheelpacks and set wheel segments
-        # Load wheelpack 1
-        # whp_name = self.configuration_wb.lookup("whp_1", "diam", self.diam, "whp_name")
-        # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
-        # await self.vgpc.load_wheel(whp_path, 1)
-        # Set wheel segments for wheelpack 1
-        # S_G1
-        op_wh_seg = self.configuration_wb.lookup("whp_1", "diam", self.diam, "S_G1_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Wheel", op_wh_seg)
-        # RN
-        op_wh_seg = self.configuration_wb.lookup("whp_1", "diam", self.diam, "RN_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel", op_wh_seg)
+        pass
+    #     # Load wheelpacks and set wheel segments
+    #     # Load wheelpack 1
+    #     # whp_name = self.configuration_wb.lookup("whp_1", "diam", self.diam, "whp_name")
+    #     # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
+    #     # await self.vgpc.load_wheel(whp_path, 1)
+    #     # Set wheel segments for wheelpack 1
+    #     # S_G1
+    #     op_wh_seg = self.configuration_wb.lookup("whp_1", "diam", self.diam, "S_G1_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Wheel", op_wh_seg)
+    #     # RN
+    #     op_wh_seg = self.configuration_wb.lookup("whp_1", "diam", self.diam, "RN_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel", op_wh_seg)
 
-        # Load wheelpack 2
-        # whp_name = self.configuration_wb.lookup("whp_2", "diam", self.diam, "whp_name")
-        # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
-        # await self.vgpc.load_wheel(whp_path, 2)
-        # Set wheel segments for wheelpack 2
-        # TN1
-        op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "TN1_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Wheel", op_wh_seg)
-        # SS
-        op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "SS_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Wheel", op_wh_seg)
-        # P1
-        op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "P1_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/Wheel", op_wh_seg)
-        # P2
-        op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "P2_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 2/Wheel", op_wh_seg)
-        # S_P2
-        op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "S_P2_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 101/Point Relief 102/Wheel", op_wh_seg)
+    #     # Load wheelpack 2
+    #     # whp_name = self.configuration_wb.lookup("whp_2", "diam", self.diam, "whp_name")
+    #     # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
+    #     # await self.vgpc.load_wheel(whp_path, 2)
+    #     # Set wheel segments for wheelpack 2
+    #     # TN1
+    #     op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "TN1_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Wheel", op_wh_seg)
+    #     # SS
+    #     op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "SS_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Wheel", op_wh_seg)
+    #     # P1
+    #     op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "P1_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/Wheel", op_wh_seg)
+    #     # P2
+    #     op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "P2_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 2/Wheel", op_wh_seg)
+    #     # S_P2
+    #     op_wh_seg = self.configuration_wb.lookup("whp_2", "diam", self.diam, "S_P2_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 101/Point Relief 102/Wheel", op_wh_seg)
 
-        # Load wheelpack 4
-        # whp_name = self.configuration_wb.lookup("whp_4", "diam", self.diam, "whp_name")
-        # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
-        # await self.vgpc.load_wheel(whp_path, 4)
-        # Set wheel segments for wheelpack 4
-        # F1
-        op_wh_seg = self.configuration_wb.lookup("whp_4", "diam", self.diam, "F1_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Wheel", op_wh_seg)
+    #     # Load wheelpack 4
+    #     # whp_name = self.configuration_wb.lookup("whp_4", "diam", self.diam, "whp_name")
+    #     # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
+    #     # await self.vgpc.load_wheel(whp_path, 4)
+    #     # Set wheel segments for wheelpack 4
+    #     # F1
+    #     op_wh_seg = self.configuration_wb.lookup("whp_4", "diam", self.diam, "F1_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Wheel", op_wh_seg)
 
-        # Load wheelpack 5
-        # whp_name = self.configuration_wb.lookup("whp_5", "diam", self.diam, "whp_name")
-        # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
-        # await self.vgpc.load_wheel(whp_path, 5)
-        # Set wheel segments for wheelpack 5
-        # ERF
-        op_wh_seg = self.configuration_wb.lookup("whp_5", "diam", self.diam, "ERF_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Wheel", op_wh_seg)
-        # ERT
-        op_wh_seg = self.configuration_wb.lookup("whp_5", "diam", self.diam, "ERT_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Blank Preparation 1/Peeling Operation/Peeling Operation 1/Wheel", op_wh_seg)
+    #     # Load wheelpack 5
+    #     # whp_name = self.configuration_wb.lookup("whp_5", "diam", self.diam, "whp_name")
+    #     # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
+    #     # await self.vgpc.load_wheel(whp_path, 5)
+    #     # Set wheel segments for wheelpack 5
+    #     # ERF
+    #     op_wh_seg = self.configuration_wb.lookup("whp_5", "diam", self.diam, "ERF_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Wheel", op_wh_seg)
+    #     # ERT
+    #     op_wh_seg = self.configuration_wb.lookup("whp_5", "diam", self.diam, "ERT_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Blank Preparation 1/Peeling Operation/Peeling Operation 1/Wheel", op_wh_seg)
         
-        # # Load wheelpack 6
-        # whp_name = self.configuration_wb.lookup("wheels", "diam", self.diam, "whp_name")
-        # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
-        # await self.vgpc.load_wheel(whp_path, 6)
-        # Set wheel segments for wheelpack 6
-        # G1
-        op_wh_seg = self.configuration_wb.lookup("whp_6", "diam", self.diam, "G1_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Wheel", op_wh_seg)
-        # G2
-        op_wh_seg = self.configuration_wb.lookup("whp_6", "diam", self.diam, "G1_wheel")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Wheel", op_wh_seg)
+    #     # # Load wheelpack 6
+    #     # whp_name = self.configuration_wb.lookup("wheels", "diam", self.diam, "whp_name")
+    #     # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
+    #     # await self.vgpc.load_wheel(whp_path, 6)
+    #     # Set wheel segments for wheelpack 6
+    #     # G1
+    #     op_wh_seg = self.configuration_wb.lookup("whp_6", "diam", self.diam, "G1_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Wheel", op_wh_seg)
+    #     # G2
+    #     op_wh_seg = self.configuration_wb.lookup("whp_6", "diam", self.diam, "G1_wheel")
+    #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Wheel", op_wh_seg)

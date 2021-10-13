@@ -1,0 +1,1 @@
+from .titaniumg5 import Tool # new tool classes must be added here

@@ -5,7 +5,23 @@ from autoprogram.vgpro import VgpClient
 from autoprogram import config
 
 
-class Tool():
+class Meta(type):
+    """
+    Metaclass defined in order to assess that the tool classes have the
+    family_address class variable
+    """
+    def __new__(cls, name, bases, body):
+        if name != "BaseTool":
+            if not "family_address" in body:
+                raise AttributeError("Tool class without family_address class attribute.")
+            if not "set_parameters" in body:
+                raise AttributeError("Tool class without set_parameters method.")
+            if not "set_wheels" in body:
+                raise AttributeError("Tool class without set_wheels method.")
+        return super().__new__(cls, name, bases, body)
+
+
+class BaseTool(metaclass=Meta):
     def __init__(self, vgp_client, name, family_address):
         self.name = name
         self.vgpc = vgp_client
@@ -39,29 +55,18 @@ class Tool():
         if arg < low_bound or arg > up_bound:
             self.error_list(0)
 
-    @staticmethod
-    def to_float(raw_str):
-        """
-        Convert string to float, if possible
-        """
-        str_res  = re.sub(config.ADD_CHARS, "", raw_str)
-        try:
-            res = float(str_res)
-        except ValueError:
-            self.error_list(1)
-        return res
+    # @staticmethod
+    # def vgp_str_to_float(vgp_str_val):
+    #     """
+    #     Call the method to convert a vgp string to a float
+    #     """
+    #     return vgp_str_to_float(vgp_str_val)
 
     async def delete_all_flanges(self):
         """
         Delete all flanges in order to speed up calculations
         """
         await self.vgp.delete_all_flanges()
-
-    async def set_parameters(self):
-        raise AttributeError("Tool object without set_parameters(self) method")
-
-    async def set_wheels(self):
-        raise AttributeError("Tool object without set_wheels(self) method")
 
     async def create(self):
         """
@@ -77,5 +82,3 @@ class Tool():
         """
         if err_id == 0:
             raise ValueError("The input argument is out of boundary.")
-        if err_id == 1:
-            raise ValueError("Value not convertible to float.")
