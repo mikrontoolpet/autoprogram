@@ -3,17 +3,17 @@ import time
 
 from autoprogram.vgpro import VgpClient
 
+VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.33.2/bin/VirtualGrindPro.exe"
 R628XW_ARG = "../MachinesRes/Machines/Cnc628xw/v7.0.37.0/cnc628xw.rds"
 
 class VgPro:
-    def __init__(self, exe_path, machine, server_url):
+    def __init__(self, machine):
         """
         Create an instance of the VgPro class, which manages the VgPro
         application
         """
-        self.exe_path = exe_path.__str__()
         self.machine = machine.__str__()
-        self.vgp_client = VgpClient(server_url)
+        self.vgp_client = VgpClient()
 
     async def __aenter__(self):
         """
@@ -25,7 +25,7 @@ class VgPro:
         else:
             self.error_list(0)
 
-        self.p = subprocess.Popen(self.exe_path + " -Machine mach_arg -SilentMode true")
+        self.p = subprocess.Popen(VGPRO_EXE_PATH + " -Machine mach_arg -SilentMode true")
         self.p.__enter__()
         await self.vgp_client.__aenter__()
         print("VgPro application started!", flush=True)

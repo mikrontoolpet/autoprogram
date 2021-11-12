@@ -16,10 +16,10 @@ class App:
 		Main method
 		"""
 		machine = args.machine[0] # machine can be specified only here
-		async with VgPro(config.VGPRO_EXE_PATH, machine, config.SERVER_URL) as vgp_client:
+		async with VgPro(machine) as vgp_client:
 			# Initialize all available tool classes
 			cls.family_dict = {}
-			for T in (tools.drills.drills.titaniumg5.Tool,): # new tool classes must be added here
+			for T in (tools.drills.drills.titaniumg5.Tool, tools.drills.drills.ic.Tool): # new tool classes must be added here
 				cls.family_dict[T.family_address] = T
 
 			# Different tool creation methods depending on the mode parameter

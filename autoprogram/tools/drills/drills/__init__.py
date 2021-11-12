@@ -1,1 +1,3 @@
-from .titaniumg5 import Tool # new tool classes must be added here
+# New tool classes must be added here
+from .titaniumg5 import Tool
+from .ic import Tool

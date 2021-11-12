@@ -36,6 +36,7 @@ class BaseTool(metaclass=Meta):
         """
         await self.vgpc.load_tool(self.master_prog_path)
         await self.vgpc.save_tool(self.res_prog_path)
+        # await self.vgpc.delete_all_flanges()
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -62,17 +63,10 @@ class BaseTool(metaclass=Meta):
     #     """
     #     return vgp_str_to_float(vgp_str_val)
 
-    async def delete_all_flanges(self):
-        """
-        Delete all flanges in order to speed up calculations
-        """
-        await self.vgp.delete_all_flanges()
-
     async def create(self):
         """
         Wrap the three methods necessary to create the tool
         """
-        # await self.delete_all_flanges()
         await self.set_parameters()
         await self.set_wheels()
 

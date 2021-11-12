@@ -21,7 +21,7 @@ class Tool(BaseTool):
         self.diam = float(diam)
         self.fl_len = float(fl_len)
         self.lead = float(lead)
-        self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/TitaniumG5/configuration_file.xlsx")
+        self.configuration_wb = WorkBook("V:/Common/MTI_Production-Engineering-Team/VGPro_Master_Programs/master_progs_base_dir/drills/drills/titaniumg5/configuration_file.xlsx")
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
@@ -43,7 +43,7 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Reference Length (RL)", 0.75*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/End Stock Removal (dL)", 0.0579*self.diam + 0.0342)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Cutting Security Distance", 0.1685*self.diam + 0.1331)
-        delta_dl = await self.vgpc.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
+        # delta_dl = await self.vgpc.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
 
         # Profile
         point_ang = 140
@@ -112,7 +112,7 @@ class Tool(BaseTool):
 
         # Flute 201 (RN)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", 0.0166*self.diam)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Core Diameter Definition", "[in %];in mm")
+        # await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Core Diameter", 75)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Attack Angle", 30)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel Displacement", 0)
@@ -123,7 +123,7 @@ class Tool(BaseTool):
 
         # Flute 301 (ERF)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Rake Shift", 0)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Core Diameter Definition", "[in %];in mm")
+        # await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Core Diameter", 75)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Attack Angle", 30)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Wheel Displacement", 0)
@@ -135,7 +135,7 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Connection Point", "s0;90%")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", 5.633*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", self.lead)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Core Diameter Definition", "[in %];in mm")
+        # await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Core Diameter Definition", "[in %];in mm")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Core Diameter", 52.5)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Rake Angle", 0)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Measure Distance", 0)
@@ -211,6 +211,7 @@ class Tool(BaseTool):
 
         # Step 0 Diameter
         # Step 0 OD Clearance
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Follow Rake", "(s1;0%);(s1;30%)")
         # OD Clearance 1 (F1)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Margin Width", 0.095*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Back Clearance", 95)

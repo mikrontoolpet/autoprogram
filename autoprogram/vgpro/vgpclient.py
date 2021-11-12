@@ -6,6 +6,7 @@ from asyncua import Client, ua
 from pathlib import Path
 
 
+SERVER_URL = "opc.tcp://localhost:8996/"
 DEC_DIGITS = 3
 ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 
@@ -66,11 +67,11 @@ def wait_till_ready(coro):
 
 
 class VgpClient:
-    def __init__(self, url):
+    def __init__(self):
         """
         Create an instance of the Client class
         """
-        self.client = Client(url, timeout=120)
+        self.client = Client(SERVER_URL, timeout=120)
 
     async def __aenter__(self):
         """
