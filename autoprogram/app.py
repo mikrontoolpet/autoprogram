@@ -16,7 +16,7 @@ class App:
 		Main method
 		"""
 		machine = args.machine[0] # machine can be specified only here
-		async with VgPro(machine) as vgp_client:
+		async with VgPro(machine) as vgp_client: # VgPro __aenter__ method return a connected VgpClient instance
 			# Initialize all available tool classes
 			cls.family_dict = {}
 			for T in (tools.drills.drills.titaniumg5.Tool, tools.drills.drills.ic.Tool): # new tool classes must be added here
@@ -43,6 +43,8 @@ class App:
 		except KeyError:
 			cls.error_list(2)
 
+		# an active VgpClient instance must be passed to the ToolFamily class,
+		# in order to be able to call the OPC-UA functions
 		async with ToolFamily(vgp_client, name, *params) as tool:
 			await tool.create()
 

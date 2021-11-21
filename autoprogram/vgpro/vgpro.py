@@ -27,9 +27,9 @@ class VgPro:
 
         self.p = subprocess.Popen(VGPRO_EXE_PATH + " -Machine mach_arg -SilentMode true")
         self.p.__enter__()
-        await self.vgp_client.__aenter__()
         print("VgPro application started!", flush=True)
-        return self.vgp_client # very important!!!
+        await self.vgp_client.__aenter__()
+        return self.vgp_client # very important!!! This is an active vgp client, that has to be passed to 
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """

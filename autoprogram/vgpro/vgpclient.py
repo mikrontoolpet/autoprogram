@@ -4,11 +4,13 @@ import re
 
 from asyncua import Client, ua
 from pathlib import Path
+from autoprogram.dbhandler import DataBase
 
 
 SERVER_URL = "opc.tcp://localhost:8996/"
 DEC_DIGITS = 3
 ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
+WHP_POSN_ARGS = ("VGP_Guid", "G_Type", "Rollomatic.Common.MetaLibrary.Flange", "G_Position")
 
 
 # Set logging level to ERROR in order to silence warning messages from asyncua
@@ -170,10 +172,17 @@ class VgpClient:
         """
         str_whp_path = str(raw_whp_path)
         int_whp_posn = int(whp_posn) - 1
+
+        # Set the specified wheelpack position into the .whs database
+        with DataBase(str_whp_path) as whp_db:
+            whp_db[WHP_POSN_ARGS] = int_whp_posn
+
         ua_str_whp_path = ua.Variant(str_whp_path, ua.VariantType.String)
-        ua_int_whp_posn = ua.Variant(int_whp_posn, ua.VariantType.Int32)
+        ua_zero_whp_shift = ua.Variant(0, ua.VariantType.Int32)
         parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
-        await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_int_whp_posn)
+        # Position shift is 0, since the correct position has already been set
+        # in the database
+        await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_zero_whp_shift)
 
     @wait_till_ready
     async def load_iso_easy(self, raw_path):

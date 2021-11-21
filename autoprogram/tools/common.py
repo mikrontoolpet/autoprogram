@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 from autoprogram.vgpro import VgpClient
-from autoprogram import config
+from autoprogram.config import Config
 
 
 class Meta(type):
@@ -22,11 +22,16 @@ class Meta(type):
 
 
 class BaseTool(metaclass=Meta):
+
+
+
     def __init__(self, vgp_client, name, family_address):
         self.name = name
-        self.vgpc = vgp_client
-        self.master_prog_path = Path(config.MASTER_PROGS_BASE_DIR).joinpath(family_address, config.MASTER_PROG_NAME + config.VGP_SUFFIX)
-        self.res_prog_path = Path(config.RES_PROGS_DIR).joinpath(name + config.VGP_SUFFIX)
+        self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
+        self.master_prog_path = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(family_address, Config.MASTER_PROG_NAME + Config.VGP_SUFFIX)
+        self.res_prog_path = Path(Config.RES_PROGS_DIR).joinpath(name + Config.VGP_SUFFIX)
+        self.std_whp_base_dir = Config.STD_WHP_BASE_DIR
+        self.whp_suffix = Config.WHP_SUFFIX
 
     async def __aenter__(self):
         """
@@ -36,7 +41,7 @@ class BaseTool(metaclass=Meta):
         """
         await self.vgpc.load_tool(self.master_prog_path)
         await self.vgpc.save_tool(self.res_prog_path)
-        # await self.vgpc.delete_all_flanges()
+        await self.vgpc.delete_all_flanges()
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -56,6 +61,12 @@ class BaseTool(metaclass=Meta):
         if arg < low_bound or arg > up_bound:
             self.error_list(0)
 
+    def full_whp_path(self, whp_name):
+        "This method return the wheelpack full path, given its name"
+        pthlb_whp_path = Path(self.std_whp_base_dir).joinpath(whp_name + self.whp_suffix)
+        str_whp_path = str(pthlb_whp_path)
+        return str_whp_path
+
     # @staticmethod
     # def vgp_str_to_float(vgp_str_val):
     #     """
@@ -67,7 +78,7 @@ class BaseTool(metaclass=Meta):
         """
         Wrap the three methods necessary to create the tool
         """
-        await self.set_parameters()
+        # await self.set_parameters()
         await self.set_wheels()
 
     def error_list(self, err_id):

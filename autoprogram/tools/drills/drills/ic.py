@@ -28,14 +28,9 @@ class Tool(BaseTool):
         self.check_boundary(self.fl_len, 6*self.diam, 25*self.diam)
 
     async def set_parameters(self):
-        # Margin calculations
-        # Circular land width varies along the flute length
-        # land_width_1 = 0.07*self.diam
-        # land_width_2 = 0.07*self.diam
-        # f_wh_width = float(WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/Titanium/configuration_file.xlsx").lookup("whp_4", "diam", self.diam, "f_wh_width")) # formatted as float to make calculations
-        # rel_width = circ_land_width - land_width_1 - land_width_2
-        # marg_width_1 = land_width_1 # program parameter to create the first land width
-        # marg_width_101 = marg_width_1 + rel_width - f_wh_width # program parameter to create the second land width
+        # Blank
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/D", self.diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/L", self.fl_len + 0.5*self.diam)
 
         # Set parameters
         # Set 1
@@ -266,17 +261,15 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/OD Profile 2D/Distance", 0.3*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/OD Profile 2D/Angle", 25)
 
-        # Blank
-        await self.vgpc.set("ns=2;s=tool/Blank/Profile/D", self.diam)
-        await self.vgpc.set("ns=2;s=tool/Blank/Profile/L", self.fl_len + 0.5*self.diam)
 
     async def set_wheels(self):
-        pass
-    #     # Load wheelpacks and set wheel segments
-    #     # Load wheelpack 1
-    #     # whp_name = self.configuration_wb.lookup("whp_1", "diam", self.diam, "whp_name")
-    #     # whp_path = Path(config.STD_WHP_BASE_DIR).joinpath(whp_name + config.WHP_SUFFIX)
-    #     # await self.vgpc.load_wheel(whp_path, 1)
+        """
+        Load wheelpacks and set wheel segments
+        """
+        # Load wheelpack 1
+        whp_name = self.configuration_wb.lookup("whp_1", "diam", self.diam, "whp_name")
+        whp_path = self.full_whp_path(whp_name)
+        await self.vgpc.load_wheel(whp_path, 1)
     #     # Set wheel segments for wheelpack 1
     #     # S_G1
     #     op_wh_seg = self.configuration_wb.lookup("whp_1", "diam", self.diam, "S_G1_wheel")
