@@ -12,6 +12,16 @@ DEC_DIGITS = 3
 ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 WHP_POSN_ARGS = ("VGP_Guid", "G_Type", "Rollomatic.Common.MetaLibrary.Flange", "G_Position")
 
+SUB_PERIOD = 50 # [ms], the variable ApplicationStateHandler.app_state is read and updated every <SUB_PERIOD> milliseconds (server communication cycle time)
+APP_STATE_CHECK_PERIOD = 0.1 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
+APP_STATE_INIT_WAIT_TIME = 0.4 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
+# APP_STATE_CHECK_PERIOD_WHEEL = 0.5 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
+# APP_STATE_INIT_WAIT_TIME_WHEEL = 1 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
+
+CONNECTION_TIMEOUT = 120 # [s], it's the max time a connection can last
+CONNECTION_START_ATTEMPT_TIMEOUT = 60 # [s], it's the max time the connection is attempted to be started
+CONNECTION_START_ATTEMPT_PERIOD = 1 # [s]
+
 
 # Set logging level to ERROR in order to silence warning messages from asyncua
 logging.basicConfig(level=logging.ERROR)
@@ -52,6 +62,32 @@ class ApplicationStateHandler(object):
         ApplicationStateHandler.app_state = val
 
 
+# def wait_till_ready(mode="default"):
+#     def wrap(coro):
+#         async def wrapped_coro(*args):
+#             print("Awaiting coroutine " + coro.__name__ +  "...", flush=True)
+#             res = await coro(*args, **kwargs)
+
+#             # Set sleep times depending on the wrapped coroutine
+#             if mode == "load_wheel":
+#                 init_wait_time = APP_STATE_INIT_WAIT_TIME_WHEEL
+#                 check_period = APP_STATE_CHECK_PERIOD_WHEEL
+#             elif mode == "default":
+#                 init_wait_time = APP_STATE_INIT_WAIT_TIME
+#                 check_period = APP_STATE_CHECK_PERIOD
+#             else:
+#                 raise ValueError(f"No such a mode for wait_till_ready decorator: {mode}")
+
+#             await asyncio.sleep(init_wait_time)
+#             while ApplicationStateHandler.app_state != ApplicationState.ready:
+#                 # print("Application state: ", ApplicationStateHandler.app_state, flush=True)
+#                 await asyncio.sleep(check_period)
+#             print("Coroutine " + coro.__name__ + " awaited!", flush=True)
+#             return res
+#         return wrapped_coro
+#     return wrap
+
+
 def wait_till_ready(coro):
     """
     Wait till ready decorator
@@ -59,10 +95,10 @@ def wait_till_ready(coro):
     async def wrapper(*args, **kwargs):
         print("Awaiting coroutine " + coro.__name__ +  "...", flush=True)
         res = await coro(*args, **kwargs)
-        await asyncio.sleep(0.12)
+        await asyncio.sleep(APP_STATE_INIT_WAIT_TIME)
         while ApplicationStateHandler.app_state != ApplicationState.ready:
             # print("Application state: ", ApplicationStateHandler.app_state, flush=True)
-            await asyncio.sleep(0.12)
+            await asyncio.sleep(APP_STATE_CHECK_PERIOD)
         print("Coroutine " + coro.__name__ + " awaited!", flush=True)
         return res
     return wrapper
@@ -73,7 +109,7 @@ class VgpClient:
         """
         Create an instance of the Client class
         """
-        self.client = Client(SERVER_URL, timeout=120)
+        self.client = Client(SERVER_URL, timeout=CONNECTION_TIMEOUT)
 
     async def __aenter__(self):
         """
@@ -108,26 +144,28 @@ class VgpClient:
                 pass
             except ua.uaerrors._auto.BadServerHalted:
                 pass
+            await asyncio.sleep(CONNECTION_START_ATTEMPT_PERIOD)
 
 
-    async def wait_for_connection(self, timeout=60):
+    async def wait_for_connection(self, timeout=CONNECTION_START_ATTEMPT_TIMEOUT):
         """
         This method calls self._wait_for_connection() with a timeout, if
-        the timout is exceeded, a TimeoutError is raised.
+        the timeout is exceeded, a TimeoutError is raised.
         """
         try:
             await asyncio.wait_for(self._wait_for_connection(), timeout)
         except asyncio.TimeoutError:
-            raise self.error_list(2)
+            self.error_list(2)
 
 
     @wait_till_ready
-    async def create_data_change_subscription(self, nodeid, handler, sub_period=100):
+    async def create_data_change_subscription(self, nodeid, handler):
         """
-        Create a subscription to a data change of the selected node
+        Create a subscription to a data change of the selected node, giving a
+        period between each time the variable is checked
         """
         app_state_node = self.client.get_node(nodeid)
-        sub = await self.client.create_subscription(sub_period, handler)
+        sub = await self.client.create_subscription(SUB_PERIOD, handler)
         handle = await sub.subscribe_data_change(app_state_node)
 
     @wait_till_ready
@@ -138,7 +176,10 @@ class VgpClient:
         str_path = str(raw_path)
         ua_str_path = ua.Variant(str_path, ua.VariantType.String)
         parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
-        await parent_node.call_method("LoadFile", ua_str_path)
+        try:
+            await parent_node.call_method("LoadFile", ua_str_path)
+        except ua.uaerrors._auto.Bad:
+            self.error_list(6)
 
     @wait_till_ready
     async def save_tool(self, raw_path):
@@ -315,3 +356,5 @@ class VgpClient:
             raise ValueError("Bad iso easy path.")
         elif err_id == 5:
             raise ValueError("This node hasn't any type.")
+        elif err_id == 6:
+            raise ValueError("No such a .vgp file.")

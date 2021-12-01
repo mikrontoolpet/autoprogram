@@ -1,5 +1,5 @@
 class Config(object):
-	MASTER_PROGS_BASE_DIR = "V:/Common/MTI_Production-Engineering-Team/VGPro_Master_Programs/master_progs_base_dir"
+	MASTER_PROGS_BASE_DIR = "C:/Users/0gugale/Desktop/master_progs_base_dir"
 	RES_PROGS_DIR = "C:/RES"
 	WHILE_WAIT_PERIOD = 1.2 # seconds
 	APP_STATE_SUB_PERIOD = 100 # milliseconds
@@ -8,5 +8,5 @@ class Config(object):
 	WHP_SUFFIX = ".whs"
 	VGP_SUFFIX = ".vgp"
 	SERVER_URL = "opc.tcp://localhost:8996/"
-	MASTER_PROG_NAME = "master_program"
+	MASTER_PROG_NAME = "master_programs/master_program"
 	ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"

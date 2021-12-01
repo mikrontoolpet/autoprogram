@@ -27,6 +27,12 @@ class WorkBook:
             rev_filt = filt[::-1] # in order to find the index of the last occurence of True value with idxmax() method
             idx = rev_filt.idxmax() # idmax() returns the idx of the max value in the series (the first idx, if there are multiple max values)
             res = sh.loc[idx, res_col] # return the correspondent element
+            # Try to convert the result to float, if possible, otherwise the
+            # result is left as it is
+            try:
+                res = float(res)
+            except ValueError:
+                pass
             return res
         except KeyError:
             self.error_list(1)

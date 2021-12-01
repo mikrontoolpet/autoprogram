@@ -314,3 +314,9 @@ class Tool(BaseTool):
     #     # G2
     #     op_wh_seg = self.configuration_wb.lookup("whp_6", "diam", self.diam, "G1_wheel")
     #     await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Wheel", op_wh_seg)
+
+    async def set_isoeasy(self):
+        """
+        Load specified isoeasy program
+        """
+        pass

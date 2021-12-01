@@ -18,12 +18,12 @@ class Meta(type):
                 raise AttributeError("Tool class without set_parameters method.")
             if not "set_wheels" in body:
                 raise AttributeError("Tool class without set_wheels method.")
+            if not "set_isoeasy" in body:
+                raise AttributeError("Tool class without set_isoeasy method.")
         return super().__new__(cls, name, bases, body)
 
 
 class BaseTool(metaclass=Meta):
-
-
 
     def __init__(self, vgp_client, name, family_address):
         self.name = name
@@ -67,18 +67,11 @@ class BaseTool(metaclass=Meta):
         str_whp_path = str(pthlb_whp_path)
         return str_whp_path
 
-    # @staticmethod
-    # def vgp_str_to_float(vgp_str_val):
-    #     """
-    #     Call the method to convert a vgp string to a float
-    #     """
-    #     return vgp_str_to_float(vgp_str_val)
-
     async def create(self):
         """
         Wrap the three methods necessary to create the tool
         """
-        # await self.set_parameters()
+        await self.set_parameters()
         await self.set_wheels()
 
     def error_list(self, err_id):
