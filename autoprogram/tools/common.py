@@ -73,6 +73,7 @@ class BaseTool(metaclass=Meta):
         """
         await self.set_parameters()
         await self.set_wheels()
+        await self.set_isoeasy()
 
     def error_list(self, err_id):
         """

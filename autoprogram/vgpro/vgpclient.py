@@ -12,9 +12,9 @@ DEC_DIGITS = 3
 ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 WHP_POSN_ARGS = ("VGP_Guid", "G_Type", "Rollomatic.Common.MetaLibrary.Flange", "G_Position")
 
-SUB_PERIOD = 50 # [ms], the variable ApplicationStateHandler.app_state is read and updated every <SUB_PERIOD> milliseconds (server communication cycle time)
-APP_STATE_CHECK_PERIOD = 0.1 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
-APP_STATE_INIT_WAIT_TIME = 0.4 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
+SUB_PERIOD = 100 # [ms], the variable ApplicationStateHandler.app_state is read and updated every <SUB_PERIOD> milliseconds (server communication cycle time)
+APP_STATE_CHECK_PERIOD = 0.2 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
+APP_STATE_INIT_WAIT_TIME = 0.25 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 # APP_STATE_CHECK_PERIOD_WHEEL = 0.5 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
 # APP_STATE_INIT_WAIT_TIME_WHEEL = 1 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 
@@ -226,7 +226,7 @@ class VgpClient:
         await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_zero_whp_shift)
 
     @wait_till_ready
-    async def load_iso_easy(self, raw_path):
+    async def load_isoeasy(self, raw_path):
         """
         Method that deletes all the previous iso programs and loads the
         specified iso easy program.
