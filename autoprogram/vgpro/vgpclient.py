@@ -214,16 +214,17 @@ class VgpClient:
         str_whp_path = str(raw_whp_path)
         int_whp_posn = int(whp_posn) - 1
 
-        # Set the specified wheelpack position into the .whs database
+        # Read the default wheelpack position
         with DataBase(str_whp_path) as whp_db:
-            whp_db[WHP_POSN_ARGS] = int_whp_posn
+            default_int_whp_posn = int(whp_db[WHP_POSN_ARGS])
+        # Shift the wheelpack position in order to have the desired position
+        whp_posn_shift = int_whp_posn - default_int_whp_posn
 
+        # Convert to ua-types
         ua_str_whp_path = ua.Variant(str_whp_path, ua.VariantType.String)
-        ua_zero_whp_shift = ua.Variant(0, ua.VariantType.Int32)
+        ua_whp_posn_shift = ua.Variant(whp_posn_shift, ua.VariantType.Int32)
         parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
-        # Position shift is 0, since the correct position has already been set
-        # in the database
-        await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_zero_whp_shift)
+        await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_whp_posn_shift)
 
     @wait_till_ready
     async def load_isoeasy(self, raw_path):
