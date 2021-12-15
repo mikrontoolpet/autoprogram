@@ -3,7 +3,7 @@ import time
 
 from autoprogram.vgpro import VgpClient
 
-VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.33.2/bin/VirtualGrindPro.exe"
+VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.33.3/bin/VirtualGrindPro.exe"
 R628XW_ARG = "../MachinesRes/Machines/Cnc628xw/v7.0.37.0/cnc628xw.rds"
 
 class VgPro:

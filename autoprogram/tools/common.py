@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from autoprogram.vgpro import VgpClient
+from autoprogram.wbhandler import WorkBook
 from autoprogram.config import Config
 
 
@@ -32,6 +32,7 @@ class BaseTool(metaclass=Meta):
         self.res_prog_path = Path(Config.RES_PROGS_DIR).joinpath(name + Config.VGP_SUFFIX)
         self.std_whp_base_dir = Config.STD_WHP_BASE_DIR
         self.whp_suffix = Config.WHP_SUFFIX
+        self.common_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/common/common.xlsx")
 
     async def __aenter__(self):
         """

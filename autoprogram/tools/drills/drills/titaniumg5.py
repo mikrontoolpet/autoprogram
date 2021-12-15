@@ -21,7 +21,7 @@ class Tool(BaseTool):
         self.diam = float(diam)
         self.fl_len = float(fl_len)
         self.lead = float(lead)
-        self.configuration_wb = WorkBook("V:/Common/MTI_Production-Engineering-Team/VGPro_Master_Programs/master_progs_base_dir/drills/drills/titaniumg5/configuration_file.xlsx")
+        self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/titaniumg5/configuration_file.xlsx")
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)

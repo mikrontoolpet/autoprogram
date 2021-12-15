@@ -43,9 +43,9 @@ class App:
 		except KeyError:
 			cls.error_list(2)
 
-		# an active VgpClient instance must be passed to the ToolFamily class,
+		# an active VgpClient instance must be passed to the ToolFamily instance,
 		# in order to be able to call the OPC-UA functions
-		async with ToolFamily(vgp_client, name, *params) as tool:
+		async with ToolFamily(vgp_client, name, *params) as tool: # tool is an instance of the ToolFamily class
 			await tool.create()
 
 	@classmethod

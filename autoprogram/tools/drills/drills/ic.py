@@ -4,6 +4,8 @@ import asyncio
 from autoprogram.tools.common import BaseTool
 from autoprogram.wbhandler import WorkBook
 
+DEC_DIGITS = 3
+
 class Tool(BaseTool):
     """
     CrazyDrill Cool SST-Inox (IC) drill class
@@ -17,37 +19,88 @@ class Tool(BaseTool):
     """
     family_address = "drills/drills/ic"
 
-    def __init__(self, vgp_client, name, diam, fl_len, lead):
+    def __init__(self, vgp_client, name, diam, fl_len, lead=None):
         super().__init__(vgp_client, name, Tool.family_address) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
-        self.lead = float(lead)
         self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/ic/worksheets/configuration_file.xlsx")
         self.diam_lt_3 = self.diam < 3
 
+        # Set the lead depending on whether it is a user input or from table
+        if lead is None:
+            self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
+        else:
+            self.lead = float(lead)
+
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
-        self.check_boundary(self.fl_len, 6*self.diam, 25*self.diam)
+        self.check_boundary(self.fl_len, 6*self.diam, 17.999*self.diam)
 
     async def set_parameters(self):
+
+        end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
+
         # Blank
-        await self.vgpc.set("ns=2;s=tool/Blank/Profile/D", self.diam)
-        await self.vgpc.set("ns=2;s=tool/Blank/Profile/L", self.fl_len + 0.5*self.diam)
+        # Profile
+        conic_len = 4.25*self.diam
+        conic_len_p4 = conic_len + end_stk_rmv
+        back_taper = 200
+        neck_diam = round(self.diam - conic_len*(1/back_taper), DEC_DIGITS)
+        fillet_rad = round(0.5*self.diam, DEC_DIGITS)
+        shank_diam = self.configuration_wb.lookup("blank", "diameter", self.diam, "shank_diameter")
+        tang_len = self.fl_len + 0.1*self.diam + end_stk_rmv
+        tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len_6_14xd") + end_stk_rmv
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter", self.diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter neck", neck_diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter shank", shank_diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Length tangent", tang_len)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Radius", fillet_rad)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Length total", tot_len)
+
+        # Coolant holes
+        # Group 1
+        hole_cent_rad_1 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_1")
+        hole_diam_1 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_1")
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Distance from center", hole_cent_rad_1)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Holes Diameter", hole_diam_1)
+
+        # Group 2
+        hole_cent_rad_2 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_2")
+        hole_diam_2 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_2")
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Distance from center", hole_cent_rad_2)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Holes Diameter", hole_diam_2)
+
+        # Group 3
+        hole_cent_rad_3 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_3")
+        hole_diam_3 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_3")
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Distance from center", hole_cent_rad_3)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Holes Diameter", hole_diam_3)
+
 
         # Set parameters
 
         # Common Data
         fl_stk_rmv = min([0.08, 0.025*self.diam])
+        d700 = self.common_wb.lookup("D700", "diameter", self.diam, "D700")
         await self.vgpc.set("ns=2;s=tool/Tool/Reference Length (RL)", 1.5*self.diam)
-        await self.vgpc.set("ns=2;s=tool/Tool/End Stock Removal (dL)", 0.0579*self.diam + 0.0342)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Cutting Security Distance", 0.1685*self.diam + 0.1331)
+        await self.vgpc.set("ns=2;s=tool/Tool/End Stock Removal (dL)", end_stk_rmv)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Cutting Security Distance", d700)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Cutting Security Distance", d700)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Cutting Security Distance", d700)
 
         # Set 1
         # Profile
         point_ang = 141
         point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
         ta0 = 0
-        sp1_len = 4.35*self.diam - point_len
+        sp1_len = 4.35*self.diam - point_len + 0.13*self.diam
         strgh_diam = 1
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/pA", point_ang)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/D0", self.diam)
@@ -86,8 +139,9 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate", g1_feedrate)
 
         # Flute 101 (G2)
+        g2_rake_shift = self.configuration_wb.trend("function_data", "diameter", self.diam, "G2_rake_shift")
         g2_end_diff = self.configuration_wb.trend("function_data", "diameter", self.diam, "G2_end_diff")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", 0.01857*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", g2_rake_shift)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL Start", front_dl_start)
         if self.diam_lt_3:
             g2_dl_end = -back_fl_len + g2_end_diff
@@ -221,8 +275,9 @@ class Tool(BaseTool):
             pass
 
         # Flute 201 (RN1)
+        rn_1_rake_shift = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN1_rake_shift")
         rn1_dl_start = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN1_dl_start")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", 0.0125*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", rn_1_rake_shift)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/dL Start", rn1_dl_start)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/dL End", -0.8*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Infeed Down Y", 0.2*self.diam)
@@ -235,9 +290,10 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Rake Shift", rn_2_rake_shift)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL Start", rn2_dl_start)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL End", -0.8*self.diam)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Z", 0.01429*self.diam)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Y", 0.25*self.diam)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Security Distance (End)", 0.25*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Down Y", 0.15*self.diam)
+        # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Z", 0.01429*self.diam)
+        # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Y", 0.25*self.diam)
+        # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Security Distance (End)", 0.25*self.diam)
         # Feeds and speeds
         # MISSING DATA!!!
 

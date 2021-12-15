@@ -336,7 +336,7 @@ class VgpClient:
     def vgp_str_to_float(vgp_str_val):
         str_val = re.sub(ADD_CHARS, "",vgp_str_val)
         try:
-            res = round(float(str_val),DEC_DIGITS)
+            res = round(float(str_val), DEC_DIGITS)
         except ValueError:
              raise ValueError(f"Value not convertible to float: {vgp_str_val}")
         return res
