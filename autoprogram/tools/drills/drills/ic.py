@@ -46,7 +46,7 @@ class Tool(BaseTool):
         conic_len_p4 = conic_len + end_stk_rmv
         back_taper = 200
         neck_diam = round(self.diam - conic_len*(1/back_taper), DEC_DIGITS)
-        fillet_rad = round(0.5*self.diam, DEC_DIGITS)
+        fillet_rad = 0.1# round(0.5*self.diam, DEC_DIGITS)
         shank_diam = self.configuration_wb.lookup("blank", "diameter", self.diam, "shank_diameter")
         tang_len = self.fl_len + 0.1*self.diam + end_stk_rmv
         tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len_6_14xd") + end_stk_rmv
@@ -134,8 +134,10 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Infeed Down Y", 0.15*self.diam)
         # Feeds and speeds
         g1_speed = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G1_speed")
+        g1_feedrate_in = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G1_feedrate_in")
         g1_feedrate = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G1_feedrate")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Cutting Speed", g1_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate In", g1_feedrate_in)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate", g1_feedrate)
 
         # Flute 101 (G2)
@@ -151,8 +153,10 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Infeed Down Y", 0.15*self.diam)
         # Feeds and speeds
         g2_speed = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_speed")
+        g2_feedrate_in = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_feedrate_in")
         g2_feedrate = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_feedrate")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Cutting Speed", g2_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Feedrate In", g2_feedrate_in)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Feedrate", g2_feedrate)
 
         # Flute 201 (S_G1)
@@ -178,7 +182,12 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Exit Radius", sg1_exit_radius)
 
         # Feeds and speeds
-        # MISSING DATA!!!
+        s_g1_speed = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G1_speed")
+        s_g1_feedrate_in = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G1_feedrate_in")
+        s_g1_feedrate = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G1_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Cutting Speed", s_g1_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Feedrate In", s_g1_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Feedrate", s_g1_feedrate)
 
         # Step 0
         sc = 0.008*self.diam
@@ -187,12 +196,20 @@ class Tool(BaseTool):
         tn3_width = self.configuration_wb.lookup("tn_width", "diameter", self.diam, "tn_width")
         s1_offset = tn3_width*(math.tan(math.radians(s1_rake)) + math.tan(math.radians(-tn3_rake)))
         s1_web_thck = sc + s1_offset
+
         # Gash 1 (S1)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Web Thickness", s1_web_thck)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Rake Angle", s1_rake)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Depth Past Center Yp", -0.02429*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Profile 2D/sR", 0.0649*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Profile 2D/sL", 0.55*self.diam)
+        # Feeds and speeds
+        s1_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "S1_speed")
+        s1_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "S1_feedrate_in")
+        s1_feedrate = self.configuration_wb.lookup("gashes", "diameter", self.diam, "S1_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Cutting Speed", s1_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Feedrate In", s1_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 1/Feed along sweep+exit", s1_feedrate)
 
         # Gash 101 (TN3)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Web Thickness", sc)
@@ -200,6 +217,13 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Depth Past Center Yp", -0.03*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Profile 2D/sR", 0.0649*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Profile 2D/sL", 0.0786*self.diam)
+        # Feeds and speeds
+        tn3_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN3_speed")
+        tn3_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN3_feedrate_in")
+        tn3_feedrate = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN3_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Cutting Speed", tn3_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Feedrate In", tn3_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Feed along sweep+exit", tn3_feedrate)
 
         # Gash 201 (TN1)
         tn1_index = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN1_gash_rotation")
@@ -207,25 +231,62 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Gash Rotation", tn1_index)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Web Thickness", tn1_web_thck)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Depth Past Center Yp", -0.2*self.diam)
+        # Feeds and speeds
+        tn1_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_speed")
+        tn1_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_feedrate_in")
+        tn1_feedrate = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Cutting Speed", tn1_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Feedrate In", tn1_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Feed along sweep+exit", tn1_feedrate)
 
         # Point Relief
         # Relief 1
         # Point Relief 1 (P1)
-        pass
+        # Feeds and speeds
+        p1_speed = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "P1_speed")
+        p1_feedrate_in = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "P1_feedrate_in")
+        p1_feedrate = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "P1_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/Cutting Speed", p1_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/Feedrate In", p1_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/Feedrate", p1_feedrate)
+
         # Point Relief 2 (P2)
-        pass
+        # Feeds and speeds
+        p2_speed = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "P2_speed")
+        p2_feedrate_in = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "P2_feedrate_in")
+        p2_feedrate = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "P2_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 2/Cutting Speed", p2_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 2/Feedrate In", p2_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 2/Feedrate", p2_feedrate)
+
         # Relief 101
         # Point Relief 102 (S_P2)
-        pass
+        # Feeds and speeds
+        s_p2_speed = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "S_P2_speed")
+        s_p2_feedrate_in = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "S_P2_feedrate_in")
+        s_p2_feedrate = self.configuration_wb.lookup("point_relieves", "diameter", self.diam, "S_P2_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 101/Point Relief 102/Cutting Speed", s_p2_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 101/Point Relief 102/Feedrate In", s_p2_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 101/Point Relief 102/Feedrate", s_p2_feedrate)
 
         # Step 0 Diameter
         # Step 0 OD Clearance
         # OD Clearance 1 (F1)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.0857*self.diam)
+        # Feeds and speeds
+        f1_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
+        f1_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Cutting Speed", f1_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Feedrate", f1_feedrate)
 
         # OD Clearance 101 (F2)
         f2_marg_width = self.configuration_wb.trend("function_data", "diameter", self.diam, "F2_margin_width")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Margin Width", f2_marg_width)
+        # Feeds and speeds
+        f2_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
+        f2_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Cutting Speed", f2_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Feedrate", f2_feedrate)
 
         # Set 2
         # Profile
@@ -253,7 +314,12 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 1 (Output)/dL End", -fl_len_end_diff)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 1 (Output)/Infeed Down Y", 0.2*self.diam)
         # Feeds and speeds
-        # MISSING DATA!!!
+        g3_speed = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G3_speed")
+        g3_feedrate_in = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G3_feedrate_in")
+        g3_feedrate = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G3_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 1 (Output)/Cutting Speed", g3_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate In", g3_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate", g3_feedrate)
 
         # Flute 101 (S_G3)
         # If Ø is less than 3 mm, S_G1 and S_G3 are performed with a single
@@ -270,7 +336,12 @@ class Tool(BaseTool):
             await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 101/Infeed Down Y", 0.2*self.diam)
             await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 101/Exit Radius", 0.5*self.diam)
             # Feeds and speeds
-            # MISSING DATA!!!
+            s_g3_speed = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G3_speed")
+            s_g3_feedrate_in = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G3_feedrate_in")
+            s_g3_feedrate = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G3_feedrate")
+            await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 101/Cutting Speed", s_g3_speed)
+            await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 101/Feedrate In", s_g3_feedrate_in)
+            await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 101/Feedrate", s_g3_feedrate)
         else:
             pass
 
@@ -282,7 +353,12 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/dL End", -0.8*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Infeed Down Y", 0.2*self.diam)
         # Feeds and speeds
-        # MISSING DATA!!!
+        rn12_speed = self.configuration_wb.lookup("rn", "diameter", self.diam, "RN12_speed")
+        rn12_feedrate_in = self.configuration_wb.lookup("rn", "diameter", self.diam, "RN12_feedrate_in")
+        rn12_feedrate = self.configuration_wb.lookup("rn", "diameter", self.diam, "RN12_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Cutting Speed", rn12_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Feedrate In", rn12_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Feedrate", rn12_feedrate)
 
         # Flute 301 (RN2)
         rn2_dl_start = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_dl_start")
@@ -291,19 +367,20 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL Start", rn2_dl_start)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL End", -0.8*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Down Y", 0.15*self.diam)
-        # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Z", 0.01429*self.diam)
-        # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Y", 0.25*self.diam)
-        # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Security Distance (End)", 0.25*self.diam)
         # Feeds and speeds
-        # MISSING DATA!!!
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Cutting Speed", rn12_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Feedrate In", rn12_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Feedrate", rn12_feedrate)
 
         # Set 3
         tn2_index = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN2_index")
         tn2_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN2_web_thickness")
         tn2_sr = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN2_sR")
+
         # OD Profile 2D
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/OD Profile 2D/Diameter", self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/OD Profile 2D/Distance", 0.3*self.diam)
+
         # Gash 1 (TN2)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Index", tn2_index) # FROM TABLE
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Virtual Profile/D", 1.17*self.diam) # FROM TABLE
@@ -311,8 +388,23 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Virtual Profile/dZ", -0.168*self.diam) # FROM TABLE
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Web Thickness", tn2_web_thck) # FROM TABLE
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Profile 2D/sR", tn2_sr) # FROM TABLE
+        # Feeds and speeds
+        tn2_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN2_speed")
+        tn2_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN2_feedrate_in")
+        tn2_feedrate = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN2_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Cutting Speed", tn2_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Feedrate In", tn2_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Feed along sweep+exit", tn2_feedrate)
+
         # Relief 1 (SM)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Reliefs/Relief Section 1/Relief 1/Cam 1/Exit distance", 0.2*self.diam)
+        # Feeds and speeds
+        sm_speed = self.configuration_wb.lookup("chamfer", "diameter", self.diam, "SM_speed")
+        sm_feedrate_in = self.configuration_wb.lookup("chamfer", "diameter", self.diam, "SM_feedrate_in")
+        sm_feedrate = self.configuration_wb.lookup("chamfer", "diameter", self.diam, "SM_feedrate")
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Reliefs/Relief Section 1/Relief 1/Cutting Speed", sm_speed)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Reliefs/Relief Section 1/Relief 1/Feedrate In", sm_feedrate_in)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Reliefs/Relief Section 1/Relief 1/Feedrate", sm_feedrate)
 
     async def set_wheels(self):
         """

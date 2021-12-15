@@ -13,8 +13,8 @@ ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 WHP_POSN_ARGS = ("VGP_Guid", "G_Type", "Rollomatic.Common.MetaLibrary.Flange", "G_Position")
 
 SUB_PERIOD = 100 # [ms], the variable ApplicationStateHandler.app_state is read and updated every <SUB_PERIOD> milliseconds (server communication cycle time)
-APP_STATE_CHECK_PERIOD = 0.2 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
-APP_STATE_INIT_WAIT_TIME = 0.25 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
+APP_STATE_CHECK_PERIOD = 0.15 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
+APP_STATE_INIT_WAIT_TIME = 0.2 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 # APP_STATE_CHECK_PERIOD_WHEEL = 0.5 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
 # APP_STATE_INIT_WAIT_TIME_WHEEL = 1 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 
@@ -62,35 +62,10 @@ class ApplicationStateHandler(object):
         ApplicationStateHandler.app_state = val
 
 
-# def wait_till_ready(mode="default"):
-#     def wrap(coro):
-#         async def wrapped_coro(*args):
-#             print("Awaiting coroutine " + coro.__name__ +  "...", flush=True)
-#             res = await coro(*args, **kwargs)
-
-#             # Set sleep times depending on the wrapped coroutine
-#             if mode == "load_wheel":
-#                 init_wait_time = APP_STATE_INIT_WAIT_TIME_WHEEL
-#                 check_period = APP_STATE_CHECK_PERIOD_WHEEL
-#             elif mode == "default":
-#                 init_wait_time = APP_STATE_INIT_WAIT_TIME
-#                 check_period = APP_STATE_CHECK_PERIOD
-#             else:
-#                 raise ValueError(f"No such a mode for wait_till_ready decorator: {mode}")
-
-#             await asyncio.sleep(init_wait_time)
-#             while ApplicationStateHandler.app_state != ApplicationState.ready:
-#                 # print("Application state: ", ApplicationStateHandler.app_state, flush=True)
-#                 await asyncio.sleep(check_period)
-#             print("Coroutine " + coro.__name__ + " awaited!", flush=True)
-#             return res
-#         return wrapped_coro
-#     return wrap
-
-
 def wait_till_ready(coro):
     """
-    Wait till ready decorator
+    Await the argument coroutine "coro" and then wait that the application
+    state is ready
     """
     async def wrapper(*args, **kwargs):
         print("Awaiting coroutine " + coro.__name__ +  "...", flush=True)
@@ -110,31 +85,30 @@ class VgpClient:
         Create an instance of the Client class
         """
         self.client = Client(SERVER_URL, timeout=CONNECTION_TIMEOUT)
+        self.app_state_sub = None
 
     async def __aenter__(self):
         """
         Append the subscription to the application state node
         after the Client __aenter__method
         """
-        print("Connecting to OPC-UA server...", flush=True)
-        await self.wait_for_connection()
-        await self.create_data_change_subscription("ns=2;s=ProgramMetadata/ApplicationState", ApplicationStateHandler())
-        print("Connected to OPC-UA server!", flush=True)
+        await self.start_connection()
+        self.app_state_sub = await self.create_data_change_subscription("ns=2;s=ProgramMetadata/ApplicationState", ApplicationStateHandler())
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """
-        Just call the self.client __aexit__ method
+        Delete application state subscription and close the connection
         """
-        print("Disonnecting from OPC-UA server...", flush=True)
-        await self.client.__aexit__(exc_type, exc_value, traceback)
-        print("Disconnected from OPC-UA server!", flush=True)
+        await self.delete_data_change_subscription(self.app_state_sub)
+        await self.close_connection(exc_type, exc_value, traceback)
 
-    async def _wait_for_connection(self):
+    async def _start_connection(self):
         """
         This method tries to connect to the OPC-UA server started from the
         VgPro application, until the connection is succesful
         """
+        print("Connecting to OPC-UA server...", flush=True)
         ready_to_connect = ConnectionState.down
         while ready_to_connect != ConnectionState.up:
             try:
@@ -145,28 +119,43 @@ class VgpClient:
             except ua.uaerrors._auto.BadServerHalted:
                 pass
             await asyncio.sleep(CONNECTION_START_ATTEMPT_PERIOD)
+        print("Connected to OPC-UA server!", flush=True)
 
-
-    async def wait_for_connection(self, timeout=CONNECTION_START_ATTEMPT_TIMEOUT):
+    async def start_connection(self, timeout=CONNECTION_START_ATTEMPT_TIMEOUT):
         """
-        This method calls self._wait_for_connection() with a timeout, if
+        This method calls self._start_connection() with a timeout, if
         the timeout is exceeded, a TimeoutError is raised.
         """
         try:
-            await asyncio.wait_for(self._wait_for_connection(), timeout)
+            await asyncio.wait_for(self._start_connection(), timeout)
         except asyncio.TimeoutError:
             self.error_list(2)
 
-
-    @wait_till_ready
     async def create_data_change_subscription(self, nodeid, handler):
         """
         Create a subscription to a data change of the selected node, giving a
-        period between each time the variable is checked
+        cycle time for the server variable reading
         """
-        app_state_node = self.client.get_node(nodeid)
-        sub = await self.client.create_subscription(SUB_PERIOD, handler)
-        handle = await sub.subscribe_data_change(app_state_node)
+        print("Creating subscription to the node " + str(nodeid) + "...", flush=True)
+        subscription = await self.client.create_subscription(SUB_PERIOD, handler)
+        subscription_node = [self.client.get_node(nodeid)]
+        await subscription.subscribe_data_change(subscription_node)
+        print("Subscription to the node " + str(nodeid) + " created!", flush=True)
+        return subscription
+
+    async def close_connection(self, exc_type, exc_value, traceback):
+        """
+        Close OPC-UA connection
+        """
+        print("Disonnecting from OPC-UA server...", flush=True)
+        await self.client.__aexit__(exc_type, exc_value, traceback)
+        print("Disconnected from OPC-UA server!", flush=True)
+
+    async def delete_data_change_subscription(self, subscription):
+        """
+        Delete the data change subscription passed as argument
+        """
+        await subscription.delete()
 
     @wait_till_ready
     async def load_tool(self, raw_path):
@@ -264,7 +253,7 @@ class VgpClient:
         2) Try to convert to float, otherwise leave it as it is
         """
         try:
-            print(f"Get method called with argument: {str(nodeid)}")
+            print(f"Get method called with argument: {str(nodeid)}", flush=True)
             node = self.client.get_node(nodeid)
             ua_type = await node.read_data_type_as_variant_type()
             val = await node.read_value() # value already read with python format (e.g. float, str, ...)
@@ -273,7 +262,7 @@ class VgpClient:
                 res = self.vgp_str_to_float(vgp_str_val)
             except ValueError:
                 res = vgp_str_val
-            print(f"Parameter at {str(nodeid)} read with value {res}.")
+            print(f"Parameter at {str(nodeid)} read with value {res}.", flush=True)
             return res
         except ua.uaerrors._auto.BadNodeIdUnknown:
             self.error_list(3)
@@ -316,7 +305,7 @@ class VgpClient:
             else:
                 raise self.error_list(0)
             await node.write_value(ua_val)
-            print(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.")
+            print(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.", flush=True)
         except ValueError:
             self.error_list(1)
         except ua.uaerrors._auto.BadNodeIdUnknown:
