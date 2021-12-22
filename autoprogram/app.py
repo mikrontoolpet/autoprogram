@@ -29,7 +29,7 @@ class App:
 			elif mode == "create_auto":
 				await cls.create_auto(vgp_client, args)
 			else:
-				cls.error_list(0)
+				cls.error_list(0, mode)
 
 	@classmethod
 	async def create_tool(cls, vgp_client, name, family, params):
@@ -41,7 +41,7 @@ class App:
 		try:
 			ToolFamily = cls.family_dict[family]
 		except KeyError:
-			cls.error_list(2)
+			cls.error_list(2, family)
 
 		# an active VgpClient instance must be passed to the ToolFamily instance,
 		# in order to be able to call the OPC-UA functions
@@ -66,13 +66,13 @@ class App:
 			await cls.create_tool(vgp_client, name, family, params)
 
 	@classmethod
-	def error_list(cls, err_id):
+	def error_list(cls, err_id, *args, **kwargs):
 		"""
 		In case of error
 		"""
 		if err_id == 0:
-			raise ValueError("The selected mode doesn't exist.")
+			raise ValueError(f"The selected mode doesn't exist: {args[0]}")
 		elif err_id == 1:
 			raise TimeoutError("OPC-UA client timeout error.")
 		elif err_id == 2:
-			raise ValueError("Specified tool family doesn't exist.")
+			raise ValueError(f"{args[0]} tool family doesn't exist.")

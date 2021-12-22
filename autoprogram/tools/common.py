@@ -63,7 +63,9 @@ class BaseTool(metaclass=Meta):
             self.error_list(0)
 
     def full_whp_path(self, whp_name):
-        "This method return the wheelpack full path, given its name"
+        """
+        This method return the wheelpack full path, given its name
+        """
         pthlb_whp_path = Path(self.std_whp_base_dir).joinpath(whp_name + self.whp_suffix)
         str_whp_path = str(pthlb_whp_path)
         return str_whp_path

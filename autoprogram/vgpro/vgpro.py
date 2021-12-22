@@ -20,7 +20,7 @@ class VgPro:
         Open the VgPro application and connect to the OPC-UA server
         """
         self.start_application() # start VgPro application
-        await self.vgp_client.__aenter__() # start OPC-UA connection
+        await self.vgp_client.__aenter__() # start OPC-UA client connection
         return self.vgp_client # very important!!! This is an active vgp client, that has to be passed to the context manager
 
     def start_application(self):
@@ -31,7 +31,7 @@ class VgPro:
         if self.machine == "628xw":
             mach_arg = R628XW_ARG
         else:
-            self.error_list(0)
+            self.error_list(0, self.machine)
 
         self.p = subprocess.Popen(VGPRO_EXE_PATH + " -Machine mach_arg -SilentMode true")
         self.p.__enter__()
@@ -53,9 +53,9 @@ class VgPro:
         await self.vgp_client.__aexit__(exc_type, exc_value, traceback) # Close the OPC-UA connection with the server
         self.close_application(exc_type, exc_value, traceback) # close the VgPro application
 
-    def error_list(self, err_id):
+    def error_list(self, err_id, *args, **kwargs):
         """
         In case of error
         """
         if err_id == 0:
-            raise ValueError("Selected machine doesn't exist.")
+            raise ValueError(f"Selected machine doesn't exist: {args[0]}")

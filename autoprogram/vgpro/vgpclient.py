@@ -168,7 +168,7 @@ class VgpClient:
         try:
             await parent_node.call_method("LoadFile", ua_str_path)
         except ua.uaerrors._auto.Bad:
-            self.error_list(6)
+            self.error_list(6, str_path)
 
     @wait_till_ready
     async def save_tool(self, raw_path):
@@ -228,7 +228,7 @@ class VgpClient:
             await self.delete_all_iso()
             await parent_node.call_method("LoadIsoEasy", ua_str_path)
         except ua.uaerrors._auto.Bad:
-            self.error_list(4)
+            self.error_list(4, str_path)
 
     @wait_till_ready
     async def delete_all_iso(self):
@@ -265,9 +265,9 @@ class VgpClient:
             print(f"Parameter at {str(nodeid)} read with value {res}.", flush=True)
             return res
         except ua.uaerrors._auto.BadNodeIdUnknown:
-            self.error_list(3)
+            self.error_list(3, nodeid)
         except ua.uaerrors._auto.BadAttributeIdInvalid:
-            self.error_list(5)
+            self.error_list(5, nodeid)
 
     @wait_till_ready
     async def set(self, nodeid, raw_val):
@@ -303,15 +303,15 @@ class VgpClient:
                 str_val = str(val)
                 ua_val = ua.Variant(str_val, ua_type) # ua.VariantType.Boolean supports python string type
             else:
-                raise self.error_list(0)
+                raise self.error_list(0, ua_type)
             await node.write_value(ua_val)
             print(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.", flush=True)
         except ValueError:
-            self.error_list(1)
+            self.error_list(1, nodeid)
         except ua.uaerrors._auto.BadNodeIdUnknown:
-            self.error_list(3)
+            self.error_list(3, nodeid)
         except ua.uaerrors._auto.BadAttributeIdInvalid:
-            self.error_list(5)
+            self.error_list(5, nodeid)
 
     @wait_till_ready
     async def calculate_cycle_time(self):
@@ -330,21 +330,21 @@ class VgpClient:
              raise ValueError(f"Value not convertible to float: {vgp_str_val}")
         return res
 
-    def error_list(self, err_id):
+    def error_list(self, err_id, *args, **kwargs):
         """
         In case of error
         """
         if err_id == 0:
-            raise TypeError("Python type not compatible with UA type.")
+            raise TypeError(f"Type {args[0]} not compatible with any of UA types.")
         elif err_id == 1:
-            raise ValueError("Value not suitable for OPC-UA type formatting.")
+            raise ValueError(f"Value at node {args[0]} not suitable for OPC-UA type formatting.")
         elif err_id == 2:
             raise TimeoutError("Connection attempt took too long, program ends.")
         elif err_id == 3:
-            raise ValueError("Bad node id.")
+            raise ValueError(f"Bad node id: {args[0]}")
         elif err_id == 4:
-            raise ValueError("Bad iso easy path.")
+            raise ValueError(f"Bad isoeasy path: {args[0]}")
         elif err_id == 5:
-            raise ValueError("This node hasn't any type.")
+            raise ValueError(f"The value at node {args[0]} hasn't any type")
         elif err_id == 6:
-            raise ValueError("No such a .vgp file.")
+            raise ValueError(f"No such a file: {args[0]}")

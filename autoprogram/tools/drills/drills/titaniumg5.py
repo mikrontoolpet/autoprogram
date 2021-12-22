@@ -4,8 +4,9 @@ from autoprogram.tools.common import BaseTool
 from autoprogram.wbhandler import WorkBook
 
 class Tool(BaseTool):
+   ss Tool(BaseTool):
     """
-    Titanium drill class
+    CrazyDrill Cool SST-Inox (IC) drill class
     """
     """
     The class variable "family_address" is necessary and must be equal
@@ -16,27 +17,69 @@ class Tool(BaseTool):
     """
     family_address = "drills/drills/titaniumg5"
 
-    def __init__(self, vgp_client, name, diam, fl_len, lead):
+    def __init__(self, vgp_client, name, diam, fl_len, lead=None):
         super().__init__(vgp_client, name, Tool.family_address) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
-        self.lead = float(lead)
-        self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/titaniumg5/configuration_file.xlsx")
+        self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/titaniumg5/worksheets/configuration_file.xlsx")
+
+        # Set the lead depending on whether it is a user input or from table
+        if lead is None:
+            self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
+        else:
+            self.lead = float(lead)
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
-        self.check_boundary(self.fl_len, 6*self.diam, 20*self.diam)
+        self.check_boundary(self.fl_len, 6*self.diam, 17.999*self.diam)
 
     async def set_parameters(self):
-        # Margin calculations
-        # Circular land width varies along the flute length
-        # land_width_1 = 0.07*self.diam
-        # land_width_2 = 0.07*self.diam
-        # f_wh_width = float(WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/Titanium/configuration_file.xlsx").lookup("whp_4", "diam", self.diam, "f_wh_width")) # formatted as float to make calculations
-        # rel_width = circ_land_width - land_width_1 - land_width_2
-        # marg_width_1 = land_width_1 # program parameter to create the first land width
-        # marg_width_101 = marg_width_1 + rel_width - f_wh_width # program parameter to create the second land width
 
+        end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
+
+        # Blank
+        # Profile
+        conic_len = 4.25*self.diam
+        conic_len_p4 = conic_len + end_stk_rmv
+        back_taper = 200
+        neck_diam = round(self.diam - conic_len*(1/back_taper), DEC_DIGITS)
+        fillet_rad = 0.1# round(0.5*self.diam, DEC_DIGITS)
+        shank_diam = self.configuration_wb.lookup("blank", "diameter", self.diam, "shank_diameter")
+        tang_len = self.fl_len + 0.1*self.diam + end_stk_rmv
+        tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len_6_14xd") + end_stk_rmv
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter", self.diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter neck", neck_diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter shank", shank_diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Length tangent", tang_len)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Radius", fillet_rad)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Length total", tot_len)
+
+        # Coolant holes
+        # Group 1
+        hole_cent_rad_1 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_1")
+        hole_diam_1 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_1")
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Distance from center", hole_cent_rad_1)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Holes Diameter", hole_diam_1)
+
+        # Group 2
+        hole_cent_rad_2 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_2")
+        hole_diam_2 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_2")
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Distance from center", hole_cent_rad_2)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Holes Diameter", hole_diam_2)
+
+        # Group 3
+        hole_cent_rad_3 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_3")
+        hole_diam_3 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_3")
+
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Distance from center", hole_cent_rad_3)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Holes Diameter", hole_diam_3)
+        
         # Set parameters
         # Set 1
         # Common Data

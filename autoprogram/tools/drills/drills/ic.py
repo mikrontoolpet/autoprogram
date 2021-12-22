@@ -37,6 +37,7 @@ class Tool(BaseTool):
         self.check_boundary(self.fl_len, 6*self.diam, 17.999*self.diam)
 
     async def set_parameters(self):
+        # Set parameters
 
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
 
@@ -82,9 +83,6 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Distance from center", hole_cent_rad_3)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Holes Diameter", hole_diam_3)
-
-
-        # Set parameters
 
         # Common Data
         fl_stk_rmv = min([0.08, 0.025*self.diam])

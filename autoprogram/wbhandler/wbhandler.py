@@ -31,6 +31,8 @@ class WorkBook:
             # result is left as it is
             try:
                 res = float(res)
+            except TypeError:
+                self.error_list(2)
             except ValueError:
                 pass
             return res
@@ -55,7 +57,7 @@ class WorkBook:
         except ValueError:
             self.error_list(2)
 
-    def error_list(self, err_id):
+    def error_list(self, err_id, *args, **kwargs):
         """
         In case of error
         """
