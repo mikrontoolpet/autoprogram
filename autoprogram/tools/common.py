@@ -11,6 +11,7 @@ class Meta(type):
     family_address class variable
     """
     def __new__(cls, name, bases, body):
+        print("Creating class " + str(name) + "...", flush=True)
         if name != "BaseTool":
             if not "family_address" in body:
                 raise AttributeError("Tool class without family_address class attribute.")
