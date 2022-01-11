@@ -30,14 +30,17 @@ class DataBase:
         Output:
             Result
         """
-        table = args[0]
-        arg_col = args[1]
-        arg = args[2]
-        res_col = args[3]
-        qry = f"SELECT {res_col} FROM {table} WHERE {arg_col} = '{arg}'" # single quotes are needed to enclose the row name
-        self.cursor.execute(qry)
-        res = self.cursor.fetchall()[0][0]
-        return res
+        try:
+            table = args[0]
+            arg_col = args[1]
+            arg = args[2]
+            res_col = args[3]
+            qry = f"SELECT {res_col} FROM {table} WHERE {arg_col} = '{arg}'" # single quotes are needed to enclose the row name
+            self.cursor.execute(qry)
+            res = self.cursor.fetchall()[0][0]
+            return res
+        except sql.OperationalError:
+            self.error_list(0, self.path)
 
     def __setitem__(self, args, val):
         """
@@ -59,3 +62,10 @@ class DataBase:
         val_col = args[3]
         qry = f"UPDATE {table} SET {val_col} = {val} WHERE {arg_col} = '{arg}'" # single quotes are needed to enclose the row name
         self.cursor.execute(qry)
+
+    def error_list(self, err_id, *args, **kwargs):
+        """
+        In case of error
+        """
+        if err_id == 0:
+            raise ValueError(f"No such a suitable database: {args[0]}.")

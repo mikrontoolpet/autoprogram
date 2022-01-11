@@ -4,7 +4,7 @@ import time
 
 from autoprogram import config
 from autoprogram import tools
-from autoprogram.vgpro import VgPro
+from autoprogram.vgpclient import VgpClient
 
 class App:
 	"""
@@ -16,7 +16,7 @@ class App:
 		Main method
 		"""
 		machine = args.machine[0] # machine can be specified only here
-		async with VgPro(machine) as vgp_client: # VgPro __aenter__ method return a connected VgpClient instance
+		async with VgpClient(machine) as vgp_client: # VgPro __aenter__ method return a connected VgpClient instance
 			# Initialize all available tool classes
 			cls.family_dict = {}
 			for T in (tools.drills.drills.titaniumg5.Tool, tools.drills.drills.ic.Tool): # new tool classes must be added here

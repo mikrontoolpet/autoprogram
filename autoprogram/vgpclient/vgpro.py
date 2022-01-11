@@ -1,7 +1,6 @@
 import subprocess
 import time
 
-from autoprogram.vgpro import VgpClient
 
 VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.33.2/bin/VirtualGrindPro.exe"
 R628XW_ARG = "../MachinesRes/Machines/Cnc628xw/v7.0.37.0/cnc628xw.rds"
@@ -13,15 +12,22 @@ class VgPro:
         application
         """
         self.machine = machine.__str__()
-        self.vgp_client = VgpClient()
+        # self.vgp_client = VgpClient()
 
-    async def __aenter__(self):
+    def __enter__(self):
         """
-        Open the VgPro application and connect to the OPC-UA server
+        Open the VgPro application
         """
         self.start_application() # start VgPro application
-        await self.vgp_client.__aenter__() # start OPC-UA client connection
-        return self.vgp_client # very important!!! This is an active vgp client, that has to be passed to the context manager
+        # await self.vgp_client.__aenter__() # start OPC-UA client connection
+        return self # very important!!!
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Close the VgPro application
+        """
+        # await self.vgp_client.__aexit__(exc_type, exc_value, traceback) # Close the OPC-UA connection with the server
+        self.close_application(exc_type, exc_value, traceback) # close the VgPro application
 
     def start_application(self):
         """
@@ -45,13 +51,6 @@ class VgPro:
         self.p.terminate()
         self.p.__exit__(exc_type, exc_value, traceback)
         print("VgPro application closed!", flush=True)
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        """
-        Close the OPC-UA connection and close the VgPro application
-        """
-        await self.vgp_client.__aexit__(exc_type, exc_value, traceback) # Close the OPC-UA connection with the server
-        self.close_application(exc_type, exc_value, traceback) # close the VgPro application
 
     def error_list(self, err_id, *args, **kwargs):
         """

@@ -4,6 +4,7 @@ import re
 
 from asyncua import Client, ua
 from pathlib import Path
+from autoprogram.vgpclient.vgpro import VgPro
 from autoprogram.dbhandler import DataBase
 
 
@@ -80,28 +81,30 @@ def wait_till_ready(coro):
 
 
 class VgpClient:
-    def __init__(self):
-        """
-        Create an instance of the Client class
-        """
+    def __init__(self,machine):
         self.client = Client(SERVER_URL, timeout=CONNECTION_TIMEOUT)
+        self.machine = machine
+        self.vgpro = VgPro(self.machine)
         self.app_state_sub = None
 
     async def __aenter__(self):
         """
-        Append the subscription to the application state node
-        after the Client __aenter__method
+        Open the VgPro application, start the OPC-UA client connection to the
+        server and make the subscription to the ApplicationState node
         """
+        self.vgpro.__enter__()
         await self.start_connection()
         self.app_state_sub = await self.create_data_change_subscription("ns=2;s=ProgramMetadata/ApplicationState", ApplicationStateHandler())
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         """
-        Delete application state subscription and close the connection
+        Delete application state subscription, close the connection to the
+        server and closethe VgPro application
         """
         await self.delete_data_change_subscription(self.app_state_sub)
-        await self.close_connection(exc_type, exc_value, traceback)
+        await self.close_connection()
+        self.vgpro.__exit__(exc_type, exc_value, traceback)
 
     async def _start_connection(self):
         """
@@ -143,12 +146,11 @@ class VgpClient:
         print("Subscription to the node " + str(nodeid) + " created!", flush=True)
         return subscription
 
-    async def close_connection(self, exc_type, exc_value, traceback):
+    async def close_connection(self):
         """
         Close OPC-UA connection
         """
         print("Disonnecting from OPC-UA server...", flush=True)
-        await self.client.__aexit__(exc_type, exc_value, traceback)
         print("Disconnected from OPC-UA server!", flush=True)
 
     async def delete_data_change_subscription(self, subscription):
