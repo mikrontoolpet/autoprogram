@@ -25,7 +25,7 @@ CONNECTION_START_ATTEMPT_PERIOD = 1 # [s]
 
 
 # Set logging level to ERROR in order to silence warning messages from asyncua
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
