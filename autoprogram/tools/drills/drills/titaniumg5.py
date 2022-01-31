@@ -16,17 +16,10 @@ class Tool(BaseTool):
     """
     family_address = "drills/drills/titaniumg5"
 
-    def __init__(self, vgp_client, name, diam, fl_len, lead=None):
-        super().__init__(vgp_client, name, Tool.family_address) # update class name here too!
+    def __init__(self, machine, vgp_client, name, diam, fl_len):
+        super().__init__(machine, vgp_client, name, Tool.family_address) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
-        self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/titaniumg5/worksheets/configuration_file.xlsx")
-
-        # Set the lead depending on whether it is a user input or from table
-        if lead is None:
-            self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
-        else:
-            self.lead = float(lead)
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
@@ -42,9 +35,10 @@ class Tool(BaseTool):
         # conic_len_p4 = conic_len + end_stk_rmv
         # back_taper = 200
         # neck_diam = self.diam - conic_len*(1/back_taper)
-        # fillet_rad = 0.1# round(0.5*self.diam, DEC_DIGITS)
+        # fillet_rad = 0.1# round(0.5*self.diam, 3)
         # shank_diam = self.configuration_wb.lookup("blank", "diameter", self.diam, "shank_diameter")
         # tang_len = self.fl_len + 0.1*self.diam + end_stk_rmv
+        lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len")
 
         await self.vgpc.set("ns=2;s=tool/Blank/Profile/D", self.diam)
@@ -61,7 +55,7 @@ class Tool(BaseTool):
         hole_cent_rad_1 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_1")
         hole_diam_1 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_1")
 
-        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Helicoidal Holes/Helicoidal Holes/Lead", lead)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Distance from center", hole_cent_rad_1)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 1/Holes Diameter", hole_diam_1)
 
@@ -69,7 +63,7 @@ class Tool(BaseTool):
         hole_cent_rad_2 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_2")
         hole_diam_2 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_2")
 
-        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Helicoidal Holes/Helicoidal Holes/Lead", lead)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Distance from center", hole_cent_rad_2)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 2/Holes Diameter", hole_diam_2)
 
@@ -77,7 +71,7 @@ class Tool(BaseTool):
         hole_cent_rad_3 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_cent_rad_3")
         hole_diam_3 = self.configuration_wb.lookup("blank", "diameter", self.diam, "hole_diam_3")
 
-        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Helicoidal Holes/Helicoidal Holes/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Helicoidal Holes/Helicoidal Holes/Lead", lead)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Distance from center", hole_cent_rad_3)
         await self.vgpc.set("ns=2;s=tool/Blank/Coolant Holes/Group 3/Holes Diameter", hole_diam_3)
 
@@ -105,19 +99,20 @@ class Tool(BaseTool):
         front_dl_start = 0.0374*self.diam + 0.1126
         fl_1_len = self.fl_len - 0.25*self.diam
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length", fl_1_len)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Lead", lead)
 
         # Flute 1 (G1)
         # Core diameter, rake angle and circular land width have a transition in values along the flute length
         g1_trans_len = 5*self.diam
         g1_len = fl_1_len
         g1_trans_perc = (g1_trans_len - point_len)/(g1_len - point_len)*100
+        g1_trans_perc = round(g1_trans_perc, 3)
         g1_core_diam_perc_1 = 32
         g1_core_diam_perc_2 = 27
         g1_rake_ang_1 = 16
         g1_rake_ang_2 = 19
-        g1_circ_land_width_1 = 0.806*self.diam
-        g1_circ_land_width_2 = 0.756*self.diam
+        g1_circ_land_width_1 = round(0.806*self.diam, 3)
+        g1_circ_land_width_2 = round(0.756*self.diam, 3)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Core Diameter", "(s1;0%;" + str(g1_core_diam_perc_1) + "%);(s1;" + str(g1_trans_perc) + "%;" + str(g1_core_diam_perc_2) + "%);(s1;100%;" + str(g1_core_diam_perc_2) + "%)")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Rake Angle", "(s1;0%;" + str(g1_rake_ang_1) + "°);(s1;" + str(g1_trans_perc) + "%;" + str(g1_rake_ang_2) + "°);(s1;100%;" + str(g1_rake_ang_2) + "°)")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Circular Land Width", "(s1;0%;" + str(g1_circ_land_width_1) + " mm);(s1;" + str(g1_trans_perc) + ";" + str(g1_circ_land_width_2) + " mm);(s1;100%;" + str(g1_circ_land_width_2) + " mm)")
@@ -148,8 +143,8 @@ class Tool(BaseTool):
         s_g1_rake_ang_1 = g1_rake_ang_1 + s_g1_rake_ang_diff
         s_g1_rake_ang_2 = g1_rake_ang_2 + s_g1_rake_ang_diff
         # Roughing land width is increased by the same amount of the core stock removal
-        s_g1_circ_land_width_1 = 0.816*self.diam
-        s_g1_circ_land_width_2 = g1_circ_land_width_2 = 0.766*self.diam
+        s_g1_circ_land_width_1 = round(0.816*self.diam, 3)
+        s_g1_circ_land_width_2 = round(0.766*self.diam, 3)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", -s_g1_rake_rad_stk_rmv)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Core Diameter", "(s1;0%;" + str(s_g1_core_diam_perc_1) + "%);(s1;" + str(s_g1_trans_perc) + "%;" + str(s_g1_core_diam_perc_2) + "%);(s1;100%;" + str(s_g1_core_diam_perc_2) + "%)")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Angle", "(s1;0%;" + str(s_g1_rake_ang_1) + "°);(s1;" + str(s_g1_trans_perc) + "%;" + str(s_g1_rake_ang_2) + "°);(s1;100%;" + str(s_g1_rake_ang_2) + "°)")
@@ -192,7 +187,7 @@ class Tool(BaseTool):
 
         # Flute 1001 (G2)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", 5.53*self.diam)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", self.lead)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", lead)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Circular Land Width", 1.0495*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL Start", front_dl_start)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Exit Radius", 0.1*self.diam)

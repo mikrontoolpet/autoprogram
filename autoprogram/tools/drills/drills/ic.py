@@ -19,18 +19,11 @@ class Tool(BaseTool):
     """
     family_address = "drills/drills/ic"
 
-    def __init__(self, vgp_client, name, diam, fl_len, lead=None):
-        super().__init__(vgp_client, name, Tool.family_address) # update class name here too!
+    def __init__(self, machine, vgp_client, name, diam, fl_len):
+        super().__init__(machine, vgp_client, name, Tool.family_address) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
-        self.configuration_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/drills/drills/ic/worksheets/configuration_file.xlsx")
         self.diam_lt_3 = self.diam < 3
-
-        # Set the lead depending on whether it is a user input or from table
-        if lead is None:
-            self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
-        else:
-            self.lead = float(lead)
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
@@ -39,6 +32,7 @@ class Tool(BaseTool):
     async def set_parameters(self):
         # Set parameters
 
+        self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
 
         # Blank

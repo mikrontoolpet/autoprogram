@@ -1,4 +1,4 @@
-import re
+import shutil
 from pathlib import Path
 
 from autoprogram.wbhandler import WorkBook
@@ -25,22 +25,37 @@ class Meta(type):
 
 class BaseTool(metaclass=Meta):
 
-    def __init__(self, vgp_client, name, family_address):
-        self.name = name
+    def __init__(self, machine, vgp_client, name, family_address):
+        self.machine = machine
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
-        self.master_prog_path = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(family_address, Config.MASTER_PROG_NAME + Config.VGP_SUFFIX)
-        self.res_prog_path = Path(Config.RES_PROGS_DIR).joinpath(name + Config.VGP_SUFFIX)
-        self.std_whp_base_dir = Config.STD_WHP_BASE_DIR
-        self.whp_suffix = Config.WHP_SUFFIX
-        self.common_wb = WorkBook("C:/Users/0gugale/Desktop/master_progs_base_dir/common/common.xlsx")
+        self.name = name
+        self.family_address = family_address
 
     async def __aenter__(self):
         """
         This __aenter__() method performs the following tasks:
-        1) Load the correct master program
-        2) Save the program on the local machine
+        1) Create shortcuts and workbooks (DataFrames)
+        2) Copies the master program on the local machine
+        3) Load the correct master program
+        4) Save the program on the local machine
         """
-        await self.vgpc.load_tool(self.master_prog_path)
+        self.family_dir = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(self.family_address)
+        self.complete_name = self.name + "_" + self.machine
+        self.res_prog_dir = Path(Config.RES_PROGS_DIR).joinpath(self.complete_name)
+        self.res_prog_dir.mkdir(parents=True, exist_ok=True)
+        self.master_prog_path = self.family_dir.joinpath(Config.MASTER_PROG_DIR, Config.MASTER_PROG_NAME + "_" + self.machine + Config.VGP_SUFFIX)
+        self.res_prog_path = self.res_prog_dir.joinpath(self.complete_name + Config.VGP_SUFFIX)
+        self.common_wb_path = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(Config.COMMON_FILE_DIR, Config.COMMON_FILE_NAME)
+        self.common_wb = WorkBook(self.common_wb_path)
+        self.worksheets_dir = self.family_dir.joinpath(Config.WORKSHEETS_DIR)
+        self.isoeasy_dir = self.family_dir.joinpath(Config.ISOEASY_DIR)
+        self.configuration_wb_path = self.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
+        self.configuration_wb = WorkBook(self.configuration_wb_path)
+        self.std_whp_base_dir = Config.STD_WHP_BASE_DIR
+        self.whp_suffix = Config.WHP_SUFFIX
+
+        shutil.copy(self.master_prog_path, self.res_prog_path)
+        await self.vgpc.load_tool(self.res_prog_path)
         await self.vgpc.save_tool(self.res_prog_path)
         await self.vgpc.delete_all_flanges()
         return self # very important!!!
@@ -48,10 +63,19 @@ class BaseTool(metaclass=Meta):
     async def __aexit__(self, exc_type, exc_value, traceback):
         """
         This __aexit__() method performs the following tasks:
-        1) Save the program
-        2) Close the file
+        1) Save the file
+        2) If an error occured, rename it appending "_FAILED" to the file name
+        3) Close the file
         """
         await self.vgpc.save_tool(self.res_prog_path)
+
+        if traceback is not None:
+            old_name = self.res_prog_path.stem
+            old_extension = self.res_prog_path.suffix
+            directory = self.res_prog_path.parent
+            new_name = old_name + "_FAILED" + old_extension
+            self.res_prog_path.rename(Path(directory, new_name))
+
         await self.vgpc.close_file()
 
     def check_boundary(self, arg, low_bound, up_bound):
@@ -64,9 +88,9 @@ class BaseTool(metaclass=Meta):
 
     def full_whp_path(self, whp_name):
         """
-        This method return the wheelpack full path, given its name
+        This method return the Craete (FOR NEW PROGRAMS ONLY!!!) wheelpack full path, given its name
         """
-        pthlb_whp_path = Path(self.std_whp_base_dir).joinpath(whp_name + self.whp_suffix)
+        pthlb_whp_path = Path(self.std_whp_base_dir).joinpath(whp_name + Config.CREATE_WHP_SUFFIX + self.whp_suffix)
         str_whp_path = str(pthlb_whp_path)
         return str_whp_path
 

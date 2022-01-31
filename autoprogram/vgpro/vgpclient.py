@@ -2,9 +2,10 @@ import asyncio
 import logging
 import re
 
+# Set asyncua logging level to WARNING in order to not visualize INFO messages
+logging.getLogger('asyncua').setLevel(logging.WARNING)
 from asyncua import Client, ua
 from pathlib import Path
-from autoprogram.vgpclient.vgpro import VgPro
 from autoprogram.dbhandler import DataBase
 
 
@@ -24,9 +25,9 @@ CONNECTION_START_ATTEMPT_TIMEOUT = 60 # [s], it's the max time the connection is
 CONNECTION_START_ATTEMPT_PERIOD = 1 # [s]
 
 
-# Set logging level to ERROR in order to silence warning messages from asyncua
+# Set vgpclient logging level to INFO
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class ApplicationState:
@@ -69,22 +70,20 @@ def wait_till_ready(coro):
     state is ready
     """
     async def wrapper(*args, **kwargs):
-        print("Awaiting coroutine " + coro.__name__ +  "...", flush=True)
+        _logger.info("Awaiting coroutine " + coro.__name__ +  "...")
         res = await coro(*args, **kwargs)
         await asyncio.sleep(APP_STATE_INIT_WAIT_TIME)
         while ApplicationStateHandler.app_state != ApplicationState.ready:
-            # print("Application state: ", ApplicationStateHandler.app_state, flush=True)
+            # _logger.info("Application state: " + str(ApplicationStateHandler.app_state))
             await asyncio.sleep(APP_STATE_CHECK_PERIOD)
-        print("Coroutine " + coro.__name__ + " awaited!", flush=True)
+        _logger.info("Coroutine " + coro.__name__ + " awaited!")
         return res
     return wrapper
 
 
 class VgpClient:
-    def __init__(self,machine):
+    def __init__(self):
         self.client = Client(SERVER_URL, timeout=CONNECTION_TIMEOUT)
-        self.machine = machine
-        self.vgpro = VgPro(self.machine)
         self.app_state_sub = None
 
     async def __aenter__(self):
@@ -92,7 +91,6 @@ class VgpClient:
         Open the VgPro application, start the OPC-UA client connection to the
         server and make the subscription to the ApplicationState node
         """
-        self.vgpro.__enter__()
         await self.start_connection()
         self.app_state_sub = await self.create_data_change_subscription("ns=2;s=ProgramMetadata/ApplicationState", ApplicationStateHandler())
         return self # very important!!!
@@ -103,15 +101,14 @@ class VgpClient:
         server and closethe VgPro application
         """
         await self.delete_data_change_subscription(self.app_state_sub)
-        await self.close_connection()
-        self.vgpro.__exit__(exc_type, exc_value, traceback)
+        await self.close_connection(exc_type, exc_value, traceback)
 
     async def _start_connection(self):
         """
         This method tries to connect to the OPC-UA server started from the
         VgPro application, until the connection is succesful
         """
-        print("Connecting to OPC-UA server...", flush=True)
+        _logger.info("Connecting to OPC-UA server...")
         ready_to_connect = ConnectionState.down
         while ready_to_connect != ConnectionState.up:
             try:
@@ -122,7 +119,7 @@ class VgpClient:
             except ua.uaerrors._auto.BadServerHalted:
                 pass
             await asyncio.sleep(CONNECTION_START_ATTEMPT_PERIOD)
-        print("Connected to OPC-UA server!", flush=True)
+        _logger.info("Connected to OPC-UA server!")
 
     async def start_connection(self, timeout=CONNECTION_START_ATTEMPT_TIMEOUT):
         """
@@ -139,19 +136,20 @@ class VgpClient:
         Create a subscription to a data change of the selected node, giving a
         cycle time for the server variable reading
         """
-        print("Creating subscription to the node " + str(nodeid) + "...", flush=True)
+        _logger.info("Creating subscription to the node " + str(nodeid) + "...")
         subscription = await self.client.create_subscription(SUB_PERIOD, handler)
         subscription_node = [self.client.get_node(nodeid)]
         await subscription.subscribe_data_change(subscription_node)
-        print("Subscription to the node " + str(nodeid) + " created!", flush=True)
+        _logger.info("Subscription to the node " + str(nodeid) + " created!")
         return subscription
 
-    async def close_connection(self):
+    async def close_connection(self, exc_type, exc_value, traceback):
         """
         Close OPC-UA connection
         """
-        print("Disonnecting from OPC-UA server...", flush=True)
-        print("Disconnected from OPC-UA server!", flush=True)
+        _logger.info("Disonnecting from OPC-UA server...")
+        await self.client.__aexit__(exc_type, exc_value, traceback)
+        _logger.info("Disconnected from OPC-UA server!")
 
     async def delete_data_change_subscription(self, subscription):
         """
@@ -255,7 +253,7 @@ class VgpClient:
         2) Try to convert to float, otherwise leave it as it is
         """
         try:
-            print(f"Get method called with argument: {str(nodeid)}", flush=True)
+            _logger.info(f"Get method called with argument: {str(nodeid)}")
             node = self.client.get_node(nodeid)
             ua_type = await node.read_data_type_as_variant_type()
             val = await node.read_value() # value already read with python format (e.g. float, str, ...)
@@ -264,7 +262,7 @@ class VgpClient:
                 res = self.vgp_str_to_float(vgp_str_val)
             except ValueError:
                 res = vgp_str_val
-            print(f"Parameter at {str(nodeid)} read with value {res}.", flush=True)
+            _logger.info(f"Parameter at {str(nodeid)} read with value {res}.")
             return res
         except ua.uaerrors._auto.BadNodeIdUnknown:
             self.error_list(3, nodeid)
@@ -307,7 +305,7 @@ class VgpClient:
             else:
                 raise self.error_list(0, ua_type)
             await node.write_value(ua_val)
-            print(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.", flush=True)
+            _logger.info(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.")
         except ValueError:
             self.error_list(1, nodeid)
         except ua.uaerrors._auto.BadNodeIdUnknown:
