@@ -20,16 +20,18 @@ class Meta(type):
                 raise AttributeError("Tool class without set_wheels method.")
             if not "set_isoeasy" in body:
                 raise AttributeError("Tool class without set_isoeasy method.")
+            if not "set_datasheet" in body:
+                raise AttributeError("Tool class without set_datasheet method.")
         return super().__new__(cls, name, bases, body)
 
 
 class BaseTool(metaclass=Meta):
 
-    def __init__(self, machine, vgp_client, name, family_address):
+    def __init__(self, machine, vgp_client, name):
         self.machine = machine
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
-        self.family_address = family_address
+        self.whp_names_list = []
 
     async def __aenter__(self):
         """
@@ -39,20 +41,18 @@ class BaseTool(metaclass=Meta):
         3) Load the correct master program
         4) Save the program on the local machine
         """
-        self.family_dir = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(self.family_address)
+        self.family_dir = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(self.family_address) # self.family_address is a child class variable (initialized in a child class of BaseTool)
         self.complete_name = self.name + "_" + self.machine
         self.res_prog_dir = Path(Config.RES_PROGS_DIR).joinpath(self.complete_name)
         self.res_prog_dir.mkdir(parents=True, exist_ok=True)
         self.master_prog_path = self.family_dir.joinpath(Config.MASTER_PROG_DIR, Config.MASTER_PROG_NAME + "_" + self.machine + Config.VGP_SUFFIX)
         self.res_prog_path = self.res_prog_dir.joinpath(self.complete_name + Config.VGP_SUFFIX)
-        self.common_wb_path = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(Config.COMMON_FILE_DIR, Config.COMMON_FILE_NAME)
-        self.common_wb = WorkBook(self.common_wb_path)
         self.worksheets_dir = self.family_dir.joinpath(Config.WORKSHEETS_DIR)
         self.isoeasy_dir = self.family_dir.joinpath(Config.ISOEASY_DIR)
+        self.common_wb = WorkBook(Config.COMMON_WB_PATH)
         self.configuration_wb_path = self.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
         self.configuration_wb = WorkBook(self.configuration_wb_path)
-        self.std_whp_base_dir = Config.STD_WHP_BASE_DIR
-        self.whp_suffix = Config.WHP_SUFFIX
+        self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".txt")
 
         shutil.copy(self.master_prog_path, self.res_prog_path)
         await self.vgpc.load_tool(self.res_prog_path)
@@ -88,11 +88,35 @@ class BaseTool(metaclass=Meta):
 
     def full_whp_path(self, whp_name):
         """
-        This method return the Craete (FOR NEW PROGRAMS ONLY!!!) wheelpack full path, given its name
+        This method return the Create (FOR NEW PROGRAMS ONLY!!!) wheelpack full path, given its name
         """
-        pthlb_whp_path = Path(self.std_whp_base_dir).joinpath(whp_name + Config.CREATE_WHP_SUFFIX + self.whp_suffix)
+        pthlb_whp_path = Path(Config.STD_WHP_BASE_DIR).joinpath(whp_name + Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
         str_whp_path = str(pthlb_whp_path)
         return str_whp_path
+
+    def full_isoeasy_path(self, isoeasy_name):
+        """
+        This method return full isoeasy path to be loaded, depending on the tool family
+        """
+        pthlb_isoeasy_path = Path(self.isoeasy_dir).joinpath(isoeasy_name + Config.ISOEASY_SUFFIX)
+        str_isoeasy_path = str(pthlb_isoeasy_path)
+        return str_isoeasy_path
+
+    def write_datasheet(self, *args):
+        """
+        This method must be used in set_datasheet method.
+        It Writes arguments and wheelpack names on a text file
+        """
+        with open(self.datasheet_path, 'w') as f:
+            # Header
+            f.write(self.complete_name + " datasheet\n\n")
+            # Custom arguments
+            for arg in args:
+                f.write(arg + "\n\n")
+            # Wheelpacks
+            f.write("Wheelpacks:\n")
+            for whp_posn, whp_name in enumerate(self.whp_names_list):
+                f.write(str(whp_posn + 1) + ") " + (whp_name) + "\n")
 
     async def create(self):
         """
@@ -101,6 +125,7 @@ class BaseTool(metaclass=Meta):
         await self.set_parameters()
         await self.set_wheels()
         await self.set_isoeasy()
+        self.set_datasheet()
 
     def error_list(self, err_id):
         """

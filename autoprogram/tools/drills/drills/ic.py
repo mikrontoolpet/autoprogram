@@ -20,7 +20,7 @@ class Tool(BaseTool):
     family_address = "drills/drills/ic"
 
     def __init__(self, machine, vgp_client, name, diam, fl_len):
-        super().__init__(machine, vgp_client, name, Tool.family_address) # update class name here too!
+        super().__init__(machine, vgp_client, name) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
         self.diam_lt_3 = self.diam < 3
@@ -482,3 +482,6 @@ class Tool(BaseTool):
         """
         isoeasy_raw_path = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_raw_path")
         await self.vgpc.load_isoeasy(isoeasy_raw_path)
+
+    async def set_datasheet(self):
+        pass

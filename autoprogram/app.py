@@ -27,7 +27,7 @@ class App:
 			# Page 4 - case "auto" (arguments from spreadsheet)
 			self.create_file_path = cli_args_dict["create_file_path"][0]
 		else:
-			self.error_list(0, cli_mode)
+			self.error_list(0, self.cli_mode)
 
 		# THESE INSTANCE VARIABLES STAY!!!
 		self.vgp_app = VgpApp(self.machine)
@@ -50,11 +50,11 @@ class App:
 
 	def init_tool_classes(self):
 		"""
-		Initialize all available tool classes
+		Initialize all available tool classes and put them in self.family_dict
 		"""
-		self.cli_family_dict = {}
+		self.family_dict = {}
 		for T in (tools.drills.drills.titaniumg5.Tool, tools.drills.drills.ic.Tool): # new tool classes must be added here
-			self.cli_family_dict[T.family_address] = T
+			self.family_dict[T.family_address] = T
 
 	async def run(self):
 		"""
@@ -90,7 +90,7 @@ class App:
 		the tool.
 		"""
 		try:
-			ToolFamily = self.cli_family_dict[family]
+			ToolFamily = self.family_dict[family]
 		except KeyError:
 			self.error_list(2, family)
 

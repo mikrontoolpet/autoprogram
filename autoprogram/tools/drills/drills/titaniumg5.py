@@ -17,7 +17,7 @@ class Tool(BaseTool):
     family_address = "drills/drills/titaniumg5"
 
     def __init__(self, machine, vgp_client, name, diam, fl_len):
-        super().__init__(machine, vgp_client, name, Tool.family_address) # update class name here too!
+        super().__init__(machine, vgp_client, name) # update class name here too!
         self.diam = float(diam)
         self.fl_len = float(fl_len)
 
@@ -214,7 +214,6 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Feed along sweep+exit", tn1_feedrate)
 
         # # S-Gash (SS)
-        # ss_exit_ang_corr = self.configuration_wb.trend("function_data", "diameter", self.diam, "SS_exit_ang_corr")
         ss_chisel_dist_corr = self.configuration_wb.trend("function_data", "diameter", self.diam, "SS_chisel_dist_corr")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/S-Gash/Web Thickness", -0.009*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/S-Gash/Depth Past Center Yp", -0.065*self.diam)
@@ -302,22 +301,29 @@ class Tool(BaseTool):
         whp_name = self.configuration_wb.lookup("wheelpacks_1_3", "diameter", self.diam, "wheelpack_1")
         whp_path = self.full_whp_path(whp_name)
         await self.vgpc.load_wheel(whp_path, 1)
+        self.whp_names_list.append(whp_name)
         # Load wheelpack 2
         whp_name = self.configuration_wb.lookup("wheelpacks_1_3", "diameter", self.diam, "wheelpack_2")
         whp_path = self.full_whp_path(whp_name)
         await self.vgpc.load_wheel(whp_path, 2)
+        self.whp_names_list.append(whp_name)
+        # Skip wheelpack 3
+        self.whp_names_list.append("")
         # Load wheelpack 4
         whp_name = self.configuration_wb.lookup("wheelpack_4", "diameter", self.diam, "wheelpack_4")
         whp_path = self.full_whp_path(whp_name)
         await self.vgpc.load_wheel(whp_path, 4)
+        self.whp_names_list.append(whp_name)
         # Load wheelpack 5
         whp_name = self.configuration_wb.lookup("wheelpack_5", "diameter", self.diam, "wheelpack_5")
         whp_path = self.full_whp_path(whp_name)
         await self.vgpc.load_wheel(whp_path, 5)
+        self.whp_names_list.append(whp_name)
         # Load wheelpack 6
         whp_name = self.configuration_wb.lookup("wheelpack_6", "diameter", self.diam, "wheelpack_6")
         whp_path = self.full_whp_path(whp_name)
         await self.vgpc.load_wheel(whp_path, 6)
+        self.whp_names_list.append(whp_name)
 
         # Set wheel segments for wheelpack 1
         # S_G1
@@ -372,5 +378,18 @@ class Tool(BaseTool):
         """
         Load specified isoeasy program
         """
-        isoeasy_raw_path = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_raw_path")
-        await self.vgpc.load_isoeasy(isoeasy_raw_path)
+        isoeasy_name = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_name")
+        isoeasy_path = self.full_isoeasy_path(isoeasy_name)
+        await self.vgpc.load_isoeasy(isoeasy_path)
+
+    def set_datasheet(self):
+        """
+        Write information on datasheet
+        """
+        if (self.fl_len/self.diam - 3) <= 6:
+            support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_6xd")
+        else:
+            support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_10xd")
+
+        support_len_text = "Support length: " + str(support_len) + " mm"
+        self.write_datasheet(support_len_text)
