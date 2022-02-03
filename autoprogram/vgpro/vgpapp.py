@@ -3,23 +3,21 @@ import logging
 import time
 
 
+from autoprogram.config import Config
+
+
 # Set vgpapp logging level to INFO
 logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
 
 
-VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.33.2/bin/VirtualGrindPro.exe"
-R628XW_ID = "R628XW"
-R628XW_ARG = "../MachinesRes/Machines/Cnc628xw/v7.0.37.0/cnc628xw.rds"
-
-
 class VgpApp:
-    def __init__(self, machine):
+    def __init__(self, machine_id):
         """
         Create an instance of the VgPro class, which manages the VgPro
         application
         """
-        self.machine = machine.__str__()
+        self.machine_id = machine_id.__str__()
 
     def __enter__(self):
         """
@@ -40,12 +38,12 @@ class VgpApp:
         """
         Start VgPro application
         """
-        if self.machine == R628XW_ID:
-            mach_arg = R628XW_ARG
-        else:
-            self.error_list(0, self.machine)
+        try:
+            mach_arg = Config.MACHINE_ARG_DICT[self.machine_id]
+        except Keyerror:
+            self.error_list(0, self.machine_id)
 
-        vgp_app_target = VGPRO_EXE_PATH + " -Machine " + mach_arg + " -SilentMode true"
+        vgp_app_target = Config.VGPRO_EXE_PATH + " -Machine " + mach_arg + " -SilentMode true"
         _logger.info("Starting the VgProapplication: " + vgp_app_target)
         self.p = subprocess.Popen(vgp_app_target)
         self.p.__enter__()

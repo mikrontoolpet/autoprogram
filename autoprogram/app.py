@@ -96,7 +96,7 @@ class App:
 
 		# an active VgpClient instance must be passed to the ToolFamily instance,
 		# in order to be able to call the OPC-UA functions
-		async with ToolFamily(self.machine, self.vgp_client, name, *params) as tool: # tool is an instance of the ToolFamily class
+		async with ToolFamily(self.vgp_client, name, *params) as tool: # tool is an instance of the ToolFamily class
 			await tool.create()
 
 	async def create_auto(self, create_file_path):

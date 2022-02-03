@@ -18,11 +18,12 @@ class Tool(BaseTool):
     2) The relative module path between the module "tools" and this class
     """
     family_address = "drills/drills/ic"
+    machine = "R628XW"
 
-    def __init__(self, machine, vgp_client, name, diam, fl_len):
-        super().__init__(machine, vgp_client, name) # update class name here too!
-        self.diam = float(diam)
-        self.fl_len = float(fl_len)
+    def __init__(self, vgp_client, name, diameter, flute_length):
+        super().__init__(Tool.machine, vgp_client, name) # update class name here too!
+        self.diam = float(diameter)
+        self.fl_len = float(flute_length)
         self.diam_lt_3 = self.diam < 3
 
         # Check the input parameters boundary

@@ -1,6 +1,7 @@
 import asyncio
 import argparse
-from .app import App
+#from .app import App
+from .gui import App
 
 
 
@@ -24,5 +25,10 @@ async def main():
 	async with App(cli_machine, cli_args_dict) as app:
 		await app.run()
 
+def main_gui():
+	app = App()
+	app.mainloop()
+
 if __name__ == '__main__':
-	asyncio.run(main())
+	# asyncio.run(main())
+	main_gui()

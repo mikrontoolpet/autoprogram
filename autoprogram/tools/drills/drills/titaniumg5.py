@@ -3,6 +3,7 @@ import math
 from autoprogram.tools.common import BaseTool
 from autoprogram.wbhandler import WorkBook
 
+
 class Tool(BaseTool):
     """
     CrazyDrill Titanium Grade 5 (ATC) drill class
@@ -15,11 +16,12 @@ class Tool(BaseTool):
     2) The relative module path between the module "tools" and this class
     """
     family_address = "drills/drills/titaniumg5"
+    machine = "R628XW"
 
-    def __init__(self, machine, vgp_client, name, diam, fl_len):
-        super().__init__(machine, vgp_client, name) # update class name here too!
-        self.diam = float(diam)
-        self.fl_len = float(fl_len)
+    def __init__(self, vgp_client, name, diameter, flute_length):
+        super().__init__(Tool.machine, vgp_client, name) # update class name here too!
+        self.diam = float(diameter)
+        self.fl_len = float(flute_length)
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)

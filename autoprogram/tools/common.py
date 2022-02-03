@@ -14,6 +14,8 @@ class Meta(type):
         if name != "BaseTool":
             if not "family_address" in body:
                 raise AttributeError("Tool class without family_address class attribute.")
+            if not "machine" in body:
+                raise AttributeError("Tool class without machine class attribute.")
             if not "set_parameters" in body:
                 raise AttributeError("Tool class without set_parameters method.")
             if not "set_wheels" in body:
