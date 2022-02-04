@@ -16,6 +16,7 @@ class Config(object):
 	ISOEASY_DIR = "isoeasy"
 	WORKSHEETS_DIR = "worksheets"
 	CONFIG_FILE_NAME = "configuration_file.xlsx"
+	CREATE_FILE_NAME = "create_file.xlsx"
 	COMMON_FILE_NAME = "common.xlsx"
 	MASTER_PROG_NAME = "master_program"
 	ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"

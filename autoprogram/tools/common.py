@@ -54,6 +54,7 @@ class BaseTool(metaclass=Meta):
         self.common_wb = WorkBook(Config.COMMON_WB_PATH)
         self.configuration_wb_path = self.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
         self.configuration_wb = WorkBook(self.configuration_wb_path)
+        self.create_wb_path = self.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
         self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".txt")
 
         shutil.copy(self.master_prog_path, self.res_prog_path)
@@ -77,6 +78,8 @@ class BaseTool(metaclass=Meta):
             directory = self.res_prog_path.parent
             new_name = old_name + "_FAILED" + old_extension
             self.res_prog_path.rename(Path(directory, new_name))
+            res_prog_dir_failed_str = str(self.res_prog_dir)
+            self.res_prog_dir.rename(res_prog_dir_failed_str)
 
         await self.vgpc.close_file()
 

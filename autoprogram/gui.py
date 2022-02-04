@@ -14,35 +14,26 @@ LARGE_FONT= ("Verdana", 12)
 import threading
 from pathlib import Path
 import inspect
+import asyncio
 
 from autoprogram.config import Config
+from autoprogram.vgpro import VgpWrapper
 from autoprogram import tools
 
 
 class App(tk.Tk):
-
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         # tk.Tk.iconbitmap(self, "robot-16.ico")
         tk.Tk.wm_title(self, "Autoprogram")
         tk.Tk.geometry(self,'400x400')
-        
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
-
-        # canvas = Canvas(self, width=2000, height=2000)
-        # canvas.place(x = -100, y = 220)
-        # blackLine = canvas.create_line(0,2,2000,2)
-        # canvas.configure(background='gray')
-        
-        # canvas_id = canvas.create_text(432,25)
-        # canvas.itemconfig(canvas_id, text = "akselov@stud.ntnu.no")
-        # canvas.insert(canvas_id, 12, "")
-
         self.frames = {}
 
+        # Pages initialization
         for F in (InitializingPage, SelectFamilyPage, SelectModePage, InsertArgumentsPage):
             frame = F(container, self)
             self.frames[F] = frame
@@ -118,7 +109,7 @@ class SelectFamilyPage(tk.Frame):
         self.family_entry.insert(0, family_address_temp)
 
     def set_family(self):
-        SelectFamilyPage.tool_family = InitializingPage.family_dict[self.family_address.get()]
+        SelectFamilyPage.ToolClass = InitializingPage.family_dict[self.family_address.get()]
         self.controller.show_frame(SelectModePage)
 
 
@@ -163,28 +154,8 @@ class InsertArgumentsPage(tk.Frame):
 
         # Next Button
         next_button = ttk.Button(self, text="Next",
-                            command=lambda: threading.Thread(target=self.set_mode).start())
+                            command=lambda: threading.Thread(target=self.next_button_method).start())
         next_button.place(x=65,y=300)
-
-        # button0 = ttk.Button(self, text="Back to Home",
-        #                     command=lambda: controller.show_frame(StartPage))
-        # button0.place(x=65,y=50)
-
-        # button1 = ttk.Button(self, text="Display Motor Speed monitor",
-        #                     command= motor_speed_monitor)
-        # button1.place(x=65,y=80)
-
-        # button2 = ttk.Button(self, text="Display Motor Torque monitor",
-        #                     command= motor_torque_monitor)
-        # button2.place(x=65,y=110)
-
-        # button3 = ttk.Button(self, text="Display Motor Current monitor",
-        #                     command= motor_current_monitor)
-        # button3.place(x=65,y=140)
-
-        # button4 = ttk.Button(self, text="Display Motor Temperature monitor",
-        #                     command= motor_temp_monitor)
-        # button4.place(x=65,y=170)
 
     def run(self):
         if SelectModePage.mode == Config.MODES[0]: # manual
@@ -192,28 +163,61 @@ class InsertArgumentsPage(tk.Frame):
         elif SelectModePage.mode == Config.MODES[1]: # auto
             pass
 
-
     def grid_ui_entries(self):
+        # Tool name label
+        tool_name_label = tk.Label(self, width=20, text="tool_name")
+        tool_name_label.grid(row=1, column=0, padx=4, pady=4)
+        # Tool name entry
+        self.ui_name = tk.StringVar(self)
+        self.tool_name_entry = ttk.Entry(self, textvariable=self.ui_name, width=20)
+        self.tool_name_entry.grid(row=1, column=1, padx=4, pady=4)
         # Inspect tool class input arguments
-        self.tool_cls_args = inspect.getargspec(SelectFamilyPage.tool_family.__init__).args[3::] # get selected tool class arguments
-        # Grid corrsponding data entries
+        self.tool_cls_args = inspect.getargspec(SelectFamilyPage.ToolClass.__init__).args[3::] # get selected tool class arguments
+        # Grid corrsponding labels and entries
         for idx, arg in enumerate(self.tool_cls_args):
-            arg_entry = tk.Entry(self, width=20, name=arg)
             arg_label = tk.Label(self, width=20, text=arg)
-            arg_entry.grid(row=1+idx, column=1, padx=4, pady=4)
-            arg_label.grid(row=1+idx, column=0, padx=4, pady=4)
+            arg_entry = tk.Entry(self, width=20, name=arg)
+            arg_label.grid(row=2+idx, column=0, padx=4, pady=4)
+            arg_entry.grid(row=2+idx, column=1, padx=4, pady=4)
 
-    def read_ui_entries(self):
-        self.str_arg_list = []
+    def get_ui_entries(self):
+        # Tool name
+        self.tool_name = self.ui_name.get()
+        # Argument entries
+        self.ui_entries_list = []
         for arg in self.tool_cls_args:
             arg_entry = self.nametowidget(arg)
             str_arg = arg_entry.get()
-            self.str_arg_list.append(raw_inp_data_i)
+            self.ui_entries_list.append(str_arg)
+        self.ui_entries_list
+
+    async def create_one_tool(self, name, params_list):
+        async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
+            await tool.create()
+
+    async def create_many_tools(self, create_file_path):
+        sh = pd.read_excel(create_file_path, sheet_name=0)
+        for idx, row in sh.iterrows():
+            family = row.loc["family"]
+            name = row.loc["name"]
+            params = row.filter(like="params").tolist()
+            try:
+                await self.create_tool(name, family, params)
+            except Exception:
+                pass
+
+    async def next_button_coroutine(self):
+        machine = SelectFamilyPage.ToolClass.machine
+        async with VgpWrapper(machine) as self.vgpw:
+            self.get_ui_entries()
+            if SelectModePage.mode == Config.MODES[0]: # manual
+                await self.create_one_tool(self.tool_name, self.ui_entries_list)
+            elif SelectModePage.mode == Config.MODES[1]: # auto
+                create_wb_path = SelectFamilyPage.ToolClass.create_wb_path
+                await self.create_many_tools(create_wb_path)
 
     def next_button_method(self):
-        if SelectModePage.mode == Config.MODES[0]: # manual
-            self.read_ui_entries()
-        self.controller.show_frame(InsertArgumentsPage)
+        asyncio.run(self.next_button_coroutine())
 
 # def motor_current_monitor():
 #     messagebox.showinfo("Display sensor data", "Motor Current data will be displayed in a new window")
