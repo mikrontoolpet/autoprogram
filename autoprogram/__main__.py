@@ -1,11 +1,11 @@
 import asyncio
 import argparse
-#from .app import App
+# from .cli import App # CLI
 from .gui import App
 
 
 
-async def main():
+async def main_cli():
 	"""
 	CLI arguments are passed while instancing the App class, subsequently they
 	will passed using GUI windows inside the app
@@ -30,5 +30,5 @@ def main_gui():
 	app.mainloop()
 
 if __name__ == '__main__':
-	# asyncio.run(main())
+	# asyncio.run(main_cli()) # CLI
 	main_gui()
