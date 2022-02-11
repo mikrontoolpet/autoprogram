@@ -7,24 +7,39 @@ from autoprogram.config import Config
 
 class Meta(type):
     """
-    Metaclass defined in order to assess that the tool classes have the
-    family_address class variable
+    Metaclass defined in order to assess that the tool classes have determined
+    class variables and methods, then creates other class variables depending
+    on the first ones
     """
-    def __new__(cls, name, bases, body):
+    def __new__(mcs, name, bases, attrs):
+        cls = type.__new__(mcs, name, bases, attrs)
         if name != "BaseTool":
-            if not "family_address" in body:
+            if not "family_address" in attrs:
                 raise AttributeError("Tool class without family_address class attribute.")
-            if not "machine" in body:
+            if not "machine" in attrs:
                 raise AttributeError("Tool class without machine class attribute.")
-            if not "set_parameters" in body:
+            if not "set_parameters" in attrs:
                 raise AttributeError("Tool class without set_parameters method.")
-            if not "set_wheels" in body:
+            if not "set_wheels" in attrs:
                 raise AttributeError("Tool class without set_wheels method.")
-            if not "set_isoeasy" in body:
+            if not "set_isoeasy" in attrs:
                 raise AttributeError("Tool class without set_isoeasy method.")
-            if not "set_datasheet" in body:
+            if not "set_datasheet" in attrs:
                 raise AttributeError("Tool class without set_datasheet method.")
-        return super().__new__(cls, name, bases, body)
+            # Create class variables depending on tool class
+            cls.family_dir = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(cls.family_address) # self.family_address is a child class variable (initialized in a child class of BaseTool)
+            cls.master_prog_path = cls.family_dir.joinpath(Config.MASTER_PROG_DIR, Config.MASTER_PROG_NAME + "_" + cls.machine + Config.VGP_SUFFIX)
+            cls.worksheets_dir = cls.family_dir.joinpath(Config.WORKSHEETS_DIR)
+            cls.isoeasy_dir = cls.family_dir.joinpath(Config.ISOEASY_DIR)
+            cls.configuration_wb_path = cls.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
+            cls.create_wb_path = cls.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
+            # Read always the first sheet of the create file
+            create_dict = WorkBook(cls.create_wb_path).wb
+            create_dict_values = [*create_dict.values()]
+            cls.create_wb = create_dict_values[0]
+            cls.common_wb = None
+            cls.configuration_wb = None
+        return cls
 
 
 class BaseTool(metaclass=Meta):
@@ -34,27 +49,22 @@ class BaseTool(metaclass=Meta):
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
         self.whp_names_list = []
+        # Workbooks are instance variables instead of class variables because they take a long time to be read,
+        # if they are already initialized (in auto mode), they are not read again
+        if self.common_wb is None:
+            self.common_wb = WorkBook(Config.COMMON_WB_PATH)
+        if self.configuration_wb is None:
+            self.configuration_wb = WorkBook(self.configuration_wb_path)
 
     async def __aenter__(self):
         """
-        This __aenter__() method performs the following tasks:
-        1) Create shortcuts and workbooks (DataFrames)
-        2) Copies the master program on the local machine
-        3) Load the correct master program
-        4) Save the program on the local machine
+        __aenter__() method:
         """
-        self.family_dir = Path(Config.MASTER_PROGS_BASE_DIR).joinpath(self.family_address) # self.family_address is a child class variable (initialized in a child class of BaseTool)
         self.complete_name = self.name + "_" + self.machine
         self.res_prog_dir = Path(Config.RES_PROGS_DIR).joinpath(self.complete_name)
         self.res_prog_dir.mkdir(parents=True, exist_ok=True)
-        self.master_prog_path = self.family_dir.joinpath(Config.MASTER_PROG_DIR, Config.MASTER_PROG_NAME + "_" + self.machine + Config.VGP_SUFFIX)
+    
         self.res_prog_path = self.res_prog_dir.joinpath(self.complete_name + Config.VGP_SUFFIX)
-        self.worksheets_dir = self.family_dir.joinpath(Config.WORKSHEETS_DIR)
-        self.isoeasy_dir = self.family_dir.joinpath(Config.ISOEASY_DIR)
-        self.common_wb = WorkBook(Config.COMMON_WB_PATH)
-        self.configuration_wb_path = self.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
-        self.configuration_wb = WorkBook(self.configuration_wb_path)
-        self.create_wb_path = self.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
         self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".txt")
 
         shutil.copy(self.master_prog_path, self.res_prog_path)

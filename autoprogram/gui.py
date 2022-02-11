@@ -158,7 +158,10 @@ class SelectModePage(tk.Frame):
 
     def next_button_method(self):
         self.set_mode()
-        self.controller.show_frame(InsertArgumentsPage)
+        if SelectModePage.mode == Config.MODES[0]: # manual
+            self.controller.show_frame(InsertArgumentsPage)
+        elif SelectModePage.mode == Config.MODES[1]: # auto
+            self.controller.show_frame(CreatePage)
 
     def back_button_method(self):
         self.controller.show_frame(SelectFamilyPage)
@@ -255,22 +258,21 @@ class CreatePage(tk.Frame):
                 await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 create_wb_path = SelectFamilyPage.ToolClass.create_wb_path
-                await self.create_many_tools(create_wb_path)
+                await self.create_many_tools()
 
     async def create_one_tool(self, name, params_list):
         async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
             await tool.create()
 
-    async def create_many_tools(self, create_file_path):
-        sh = pd.read_excel(create_file_path, sheet_name=0)
-        for idx, row in sh.iterrows():
-            family = row.loc["family"]
+    async def create_many_tools(self):
+        df = SelectFamilyPage.ToolClass.create_wb
+        for idx, row in df.iterrows():
             name = row.loc["name"]
-            params = row.filter(like="params").tolist()
+            params_list = row.filter(like="params").tolist()
             try:
-                await self.create_tool(name, family, params)
+                await self.create_one_tool(name, params_list)
             except Exception:
-                pass
+                _logger.error(f"Program {name} creation has failed!")
 
     def next_button_method(self):
         self.controller.show_frame(SelectModePage)

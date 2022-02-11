@@ -169,6 +169,8 @@ class VgpClient:
             await parent_node.call_method("LoadFile", ua_str_path)
         except ua.uaerrors._auto.Bad:
             self.error_list(6, str_path)
+        _logger.info(f"File loaded: {str_path}")
+
 
     @wait_till_ready
     async def save_tool(self, raw_path):
@@ -305,13 +307,13 @@ class VgpClient:
             else:
                 raise self.error_list(0, ua_type)
             await node.write_value(ua_val)
-            _logger.info(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.")
         except ValueError:
             self.error_list(1, nodeid)
         except ua.uaerrors._auto.BadNodeIdUnknown:
             self.error_list(3, nodeid)
         except ua.uaerrors._auto.BadAttributeIdInvalid:
             self.error_list(5, nodeid)
+        _logger.info(f"Parameter at {str(nodeid)} set with value {str(ua_val.Value)}.")
 
     @wait_till_ready
     async def calculate_cycle_time(self):

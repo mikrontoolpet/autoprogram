@@ -1,6 +1,12 @@
 import asyncio
 import pandas as pd
 from scipy import interpolate
+import logging
+
+# Set wbhandler logging level to INFO
+logging.basicConfig(level=logging.INFO)
+_logger = logging.getLogger(__name__)
+
 
 class WorkBook:
     def __init__(self, path):
@@ -8,10 +14,12 @@ class WorkBook:
         Create a dictionary, whose element are pd.DataFrames
         corresponding to different worksheets
         """
+        _logger.info(f"Reading the excel file {path}")
         try:
             self.wb = pd.read_excel(path, sheet_name=None)
         except FileNotFoundError:
             self.error_list(3)
+        _logger.info("Excel file read!")
      
     def lookup(self, sheet_name, arg_col, arg_val, res_col):
         """
@@ -68,4 +76,5 @@ class WorkBook:
         elif err_id == 2:
             raise ValueError("Could not convert column to float or no argument in the worksheet.")
         elif err_id == 3:
+            _logger.error("Could not find the specified workbook.")
             raise ValueError("Could not find the specified workbook.")

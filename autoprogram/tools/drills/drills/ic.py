@@ -481,7 +481,7 @@ class Tool(BaseTool):
         """
         Load specified isoeasy program
         """
-        isoeasy_raw_path = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_raw_path")
+        isoeasy_raw_path = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_name")
         await self.vgpc.load_isoeasy(isoeasy_raw_path)
 
     async def set_datasheet(self):
