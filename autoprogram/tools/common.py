@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+import win32com.client
 
 from autoprogram.wbhandler import WorkBook
 from autoprogram.config import Config
@@ -132,6 +133,11 @@ class BaseTool(metaclass=Meta):
             f.write("Wheelpacks:\n")
             for whp_posn, whp_name in enumerate(self.whp_names_list):
                 f.write(str(whp_posn + 1) + ") " + (whp_name) + "\n")
+
+    def copy_whp_png():
+        for whp_name in self.whp_names_list:
+            f.write(str(whp_posn + 1) + ") " + (whp_name) + "\n")
+
 
     async def create(self):
         """
