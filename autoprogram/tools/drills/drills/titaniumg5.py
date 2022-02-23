@@ -1,6 +1,6 @@
 from pathlib import Path
 import math
-from autoprogram.tools.common import BaseTool
+from autoprogram.tools.basetool import BaseTool
 from autoprogram.wbhandler import WorkBook
 
 
@@ -19,7 +19,7 @@ class Tool(BaseTool):
     machine = "R628XW"
 
     def __init__(self, vgp_client, name, diameter, flute_length):
-        super().__init__(Tool.machine, vgp_client, name) # update class name here too!
+        super().__init__(vgp_client, name) # update class name here too!
         self.diam = float(diameter)
         self.fl_len = float(flute_length)
 

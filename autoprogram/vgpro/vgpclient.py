@@ -20,7 +20,7 @@ APP_STATE_INIT_WAIT_TIME = 0.2 # [s], initial time to let the ApplicationStateHa
 # APP_STATE_CHECK_PERIOD_WHEEL = 0.5 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
 # APP_STATE_INIT_WAIT_TIME_WHEEL = 1 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 
-CONNECTION_TIMEOUT = 120 # [s], it's the max time a connection can last
+REQUEST_TIMEOUT = 120 # [s], it's the max time a connection can last
 CONNECTION_START_ATTEMPT_TIMEOUT = 60 # [s], it's the max time the connection is attempted to be started
 CONNECTION_START_ATTEMPT_PERIOD = 1 # [s]
 
@@ -83,7 +83,7 @@ def wait_till_ready(coro):
 
 class VgpClient:
     def __init__(self):
-        self.client = Client(SERVER_URL, timeout=CONNECTION_TIMEOUT)
+        self.client = Client(SERVER_URL, timeout=REQUEST_TIMEOUT)
         self.app_state_sub = None
 
     async def __aenter__(self):
@@ -121,13 +121,13 @@ class VgpClient:
             await asyncio.sleep(CONNECTION_START_ATTEMPT_PERIOD)
         _logger.info("Connected to OPC-UA server!")
 
-    async def start_connection(self, timeout=CONNECTION_START_ATTEMPT_TIMEOUT):
+    async def start_connection(self):
         """
         This method calls self._start_connection() with a timeout, if
         the timeout is exceeded, a TimeoutError is raised.
         """
         try:
-            await asyncio.wait_for(self._start_connection(), timeout)
+            await asyncio.wait_for(self._start_connection(), CONNECTION_START_ATTEMPT_TIMEOUT)
         except asyncio.TimeoutError:
             self.error_list(2)
 

@@ -21,10 +21,14 @@ from autoprogram.config import Config
 from autoprogram.vgpro import VgpWrapper
 from autoprogram import tools
 from autoprogram.errors import *
+from autoprogram.common import try_more_times
 
 # Set gui logging level to INFO
 logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
+
+CREATE_TOOL_TIMEOUT = 600
+CREATE_TOOL_MAX_TRY_ATTEMPTS = 5
 
 
 class App(tk.Tk):
@@ -253,29 +257,27 @@ class CreatePage(tk.Frame):
         asyncio.run(self.run_coroutine())
 
     async def run_coroutine(self):
-        async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             if SelectModePage.mode == Config.MODES[0]: # manual
                 await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
             elif SelectModePage.mode == Config.MODES[1]: # auto
-                create_wb_path = SelectFamilyPage.ToolClass.create_wb_path
                 await self.create_many_tools()
-
+    @try_more_times
     async def create_one_tool(self, name, params_list):
-        async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
-            await tool.create()
+        async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
+            async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
+                tool.create()
+            
 
     async def create_many_tools(self):
         df = SelectFamilyPage.ToolClass.create_wb
         for idx, row in df.iterrows():
             name = row.loc["name"]
             params_list = row.filter(like="params").tolist()
-            try:
-                await self.create_one_tool(name, params_list)
-            except Exception:
-                _logger.error(f"Program {name} creation has failed!")
+            await self.create_one_tool(name, params_list)
 
     def next_button_method(self):
         self.controller.show_frame(SelectModePage)
 
     def back_button_method(self):
         self.controller.show_frame(InsertArgumentsPage)
+

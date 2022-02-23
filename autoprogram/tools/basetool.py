@@ -1,10 +1,15 @@
 import shutil
+import asyncio
 from pathlib import Path
 import win32com.client
+import logging
 
 from autoprogram.wbhandler import WorkBook
 from autoprogram.config import Config
+from autoprogram.common import try_more_times
 
+logging.basicConfig(level=logging.INFO)
+_logger = logging.getLogger(__name__)
 
 class Meta(type):
     """
@@ -45,31 +50,36 @@ class Meta(type):
 
 class BaseTool(metaclass=Meta):
 
-    def __init__(self, machine, vgp_client, name):
-        self.machine = machine
+    def __init__(self, vgp_client, name):
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
         self.whp_names_list = []
         # Workbooks are instance variables instead of class variables because they take a long time to be read,
         # if they are already initialized (in auto mode), they are not read again
-        if self.common_wb is None:
-            self.common_wb = WorkBook(Config.COMMON_WB_PATH)
-        if self.configuration_wb is None:
-            self.configuration_wb = WorkBook(self.configuration_wb_path)
+        # T.B.N.: self.__class__ needed to access child class variable inside __init__ method
+        if self.__class__.common_wb is None:
+            self.__class__.common_wb = WorkBook(Config.COMMON_WB_PATH)
+        if self.__class__.configuration_wb is None:
+            self.__class__.configuration_wb = WorkBook(self.__class__.configuration_wb_path)
 
     async def __aenter__(self):
         """
         __aenter__() method:
         """
-        self.complete_name = self.name + "_" + self.machine
+        self.complete_name = self.name + "_" + self.__class__.machine
         self.res_prog_dir = Path(Config.RES_PROGS_DIR).joinpath(self.complete_name)
-        self.res_prog_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.res_prog_dir.mkdir(parents=True)
+        except FileExistsError:
+            shutil.rmtree(self.res_prog_dir)
+            self.res_prog_dir.mkdir(parents=True)
+
     
         self.res_prog_path = self.res_prog_dir.joinpath(self.complete_name + Config.VGP_SUFFIX)
         self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".txt")
 
-        shutil.copy(self.master_prog_path, self.res_prog_path)
-        await self.vgpc.load_tool(self.res_prog_path)
+        shutil.copyfile(self.master_prog_path, self.res_prog_path)
+        await self.load_tool(self.res_prog_path)
         await self.vgpc.save_tool(self.res_prog_path)
         await self.vgpc.delete_all_flanges()
         return self # very important!!!
@@ -82,6 +92,7 @@ class BaseTool(metaclass=Meta):
         3) Close the file
         """
         await self.vgpc.save_tool(self.res_prog_path)
+        await self.vgpc.close_file()
 
         if traceback is not None:
             old_name = self.res_prog_path.stem
@@ -91,8 +102,7 @@ class BaseTool(metaclass=Meta):
             self.res_prog_path.rename(Path(directory, new_name))
             res_prog_dir_failed_str = str(self.res_prog_dir)
             self.res_prog_dir.rename(res_prog_dir_failed_str)
-
-        await self.vgpc.close_file()
+            _logger.error(old_name + " FAILED!")
 
     def check_boundary(self, arg, low_bound, up_bound):
         """
@@ -134,9 +144,9 @@ class BaseTool(metaclass=Meta):
             for whp_posn, whp_name in enumerate(self.whp_names_list):
                 f.write(str(whp_posn + 1) + ") " + (whp_name) + "\n")
 
-    def copy_whp_png():
-        for whp_name in self.whp_names_list:
-            f.write(str(whp_posn + 1) + ") " + (whp_name) + "\n")
+    @try_more_times
+    async def load_tool(self, raw_path):
+        await self.vgpc.load_tool(raw_path)
 
 
     async def create(self):
@@ -154,3 +164,5 @@ class BaseTool(metaclass=Meta):
         """
         if err_id == 0:
             raise ValueError("The input argument is out of boundary.")
+        if err_id == 1:
+            raise FileNotFoundError("Load tool max attempts exceeded.")

@@ -1,7 +1,7 @@
 from pathlib import Path
 import math
 import asyncio
-from autoprogram.tools.common import BaseTool
+from autoprogram.tools.basetool import BaseTool
 from autoprogram.wbhandler import WorkBook
 
 DEC_DIGITS = 3
@@ -21,10 +21,9 @@ class Tool(BaseTool):
     machine = "R628XW"
 
     def __init__(self, vgp_client, name, diameter, flute_length):
-        super().__init__(Tool.machine, vgp_client, name) # update class name here too!
+        super().__init__(vgp_client, name) # update class name here too!
         self.diam = float(diameter)
         self.fl_len = float(flute_length)
-        self.diam_lt_3 = self.diam < 3
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
@@ -277,7 +276,7 @@ class Tool(BaseTool):
 
         # Flute 201 (RN1)
         rn1_dl_start = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN1_dl_start")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", 0.03*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", 0.028*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/dL Start", rn1_dl_start)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/dL End", -0.8*self.diam)
         # await self.vgpc.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 201/Infeed Down Y", 0.2*self.diam)
@@ -309,13 +308,12 @@ class Tool(BaseTool):
         # Gash 1 (TN2)
         tn2_index = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN2_index")
         tn2_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN2_web_thickness")
-        tn2_sr = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN2_sR")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Index", tn2_index)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Virtual Profile/D", 1.17*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Virtual Profile/dD", 0.943*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Virtual Profile/dZ", -0.168*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Web Thickness", tn2_web_thck)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Profile 2D/sR", tn2_sr)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 3/Rake Operations/Gash 1/Profile 2D/sR", 0.263*self.diam)
         # Feeds and speeds
         tn2_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN2_speed")
         tn2_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN2_feedrate_in")
@@ -416,5 +414,5 @@ class Tool(BaseTool):
         isoeasy_path = self.full_isoeasy_path(isoeasy_name)
         await self.vgpc.load_isoeasy(isoeasy_path)
 
-    async def set_datasheet(self):
+    def set_datasheet(self):
         pass
