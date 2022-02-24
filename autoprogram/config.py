@@ -1,12 +1,12 @@
 from pathlib import Path
 
 class Config(object):
-	MASTER_PROGS_BASE_DIR = "V:/Common/MTI_Production-Engineering-Team/AUTOPROGRAM/master_progs_base_dir"
+	MASTER_PROGS_BASE_DIR = r"\\mikron.net\Group\MT\Common\MTI_Production-Engineering-Team\AUTOPROGRAM\master_progs_base_dir"
 	RES_PROGS_DIR = "C:/RES"
 	WHILE_WAIT_PERIOD = 1.2 # seconds
 	APP_STATE_SUB_PERIOD = 100 # milliseconds
-	STD_WHP_BASE_DIR = "V:/MTO/Common/Articoli_Mikron_Tool_International/Wheel_Packs/PWS_R628XW/Create"	
-	CUST_WHP_BASE_DIR = "V:/MTO/Common/Articoli_Mikron_Tool_International/Wheel_Packs/PWI_R628XW/Create"
+	STD_WHP_BASE_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWS_R628XW\Create"	
+	CUST_WHP_BASE_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWI_R628XW\Create"
 	WHP_SUFFIX = ".whs"
 	VGP_SUFFIX = ".vgp"
 	ISOEASY_SUFFIX = ".vgpx"

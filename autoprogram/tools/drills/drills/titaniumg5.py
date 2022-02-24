@@ -91,7 +91,7 @@ class Tool(BaseTool):
         point_ang = 141
         point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
         ta0 = -0.029
-        sp1 = self.fl_len - 1.9*self.diam
+        sp1 = self.fl_len - 1.7*self.diam
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/pA", point_ang)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/D0", self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/Ta0", ta0)
@@ -188,7 +188,7 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 301/Feedrate", erf_feedrate)
 
         # Flute 1001 (G2)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", 5.633*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", 5.47*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", lead)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Circular Land Width", 1.0495*self.diam)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL Start", front_dl_start)
@@ -238,7 +238,7 @@ class Tool(BaseTool):
 
         # Point Relief
         # Relief 1
-        pnt_frst_rlf = 16 if self.diam < 4 else 13
+        pnt_frst_rlf = 16 if self.diam <= 4 else 13
         # Point Relief 1 (P1)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/Relief Angle", pnt_frst_rlf)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 1/Point Relief 1/dL End", 0.04*self.diam + 0.06)
@@ -272,9 +272,13 @@ class Tool(BaseTool):
         # Step 0 Diameter
         # Step 0 OD Clearance
         # OD Clearance 1 (F1)
-        f1_drop_ang = self.configuration_wb.trend("function_data", "diameter", self.diam, "F1_drop_angle")
+        f1_bk_clear_perc = self.configuration_wb.lookup("function_data", "diameter", self.diam, "F1_back_clearance")
+        f1_drop_ang = self.configuration_wb.lookup("function_data", "diameter", self.diam, "F1_drop_angle")
+        f1_c_rot_end = self.configuration_wb.lookup("function_data", "diameter", self.diam, "F1_c_rotation_end")
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Margin Width", 0.095*self.diam)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Back Clearance", f1_bk_clear_perc)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/Drop Angle", f1_drop_ang)
+        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/C Rotation at end", f1_c_rot_end)
         # Feeds and speeds
         f1_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F1_speed")
         f1_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F1_feedrate")

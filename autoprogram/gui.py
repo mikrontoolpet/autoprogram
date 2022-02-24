@@ -261,11 +261,11 @@ class CreatePage(tk.Frame):
                 await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
-    @try_more_times
+
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
-                tool.create()
+                await tool.create()
             
 
     async def create_many_tools(self):
