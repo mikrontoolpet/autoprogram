@@ -2,7 +2,7 @@ import asyncio
 
 from autoprogram.errors import *
 
-MAX_ATTEMPTS = 10
+MAX_ATTEMPTS = 5
 TIMEOUT = 600
 WAIT_PERIOD = 1
 
@@ -20,5 +20,5 @@ def try_more_times(coro):
             await asyncio.sleep(WAIT_PERIOD)
 
         if attempt > MAX_ATTEMPTS:
-            raise errors.TryMoreTimesFailed
+            raise TryMoreTimesFailed
     return wrapper

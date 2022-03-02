@@ -4,6 +4,7 @@ from pathlib import Path
 import win32com.client
 import logging
 
+from autoprogram.errors import *
 from autoprogram.wbhandler import WorkBook
 from autoprogram.config import Config
 from autoprogram.common import try_more_times
@@ -37,14 +38,22 @@ class Meta(type):
             cls.master_prog_path = cls.family_dir.joinpath(Config.MASTER_PROG_DIR, Config.MASTER_PROG_NAME + "_" + cls.machine + Config.VGP_SUFFIX)
             cls.worksheets_dir = cls.family_dir.joinpath(Config.WORKSHEETS_DIR)
             cls.isoeasy_dir = cls.family_dir.joinpath(Config.ISOEASY_DIR)
-            cls.configuration_wb_path = cls.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
-            cls.create_wb_path = cls.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
-            # Read always the first sheet of the create file
-            create_dict = WorkBook(cls.create_wb_path).wb
-            create_dict_values = [*create_dict.values()]
-            cls.create_wb = create_dict_values[0]
-            cls.common_wb = None
-            cls.configuration_wb = None
+            # Read common worksheet
+            cls.common_wb = WorkBook(Config.COMMON_WB_PATH)
+            # Read create filee
+            try:
+                create_wb_path = cls.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
+                create_dict = WorkBook(create_wb_path).wb
+                create_dict_values = [*create_dict.values()]
+                cls.create_wb = create_dict_values[0]
+            except ValueError:
+                raise WrongCreateFileName
+            # Read configuration file
+            try:
+                configuration_wb_path = cls.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
+                cls.configuration_wb = WorkBook(configuration_wb_path)
+            except ValueError:
+                raise WrongConfigurationFileName
         return cls
 
 
@@ -54,13 +63,7 @@ class BaseTool(metaclass=Meta):
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
         self.whp_names_list = []
-        # Workbooks are instance variables instead of class variables because they take a long time to be read,
-        # if they are already initialized (in auto mode), they are not read again
-        # T.B.N.: self.__class__ needed to access child class variable inside __init__ method
-        if self.__class__.common_wb is None:
-            self.__class__.common_wb = WorkBook(Config.COMMON_WB_PATH)
-        if self.__class__.configuration_wb is None:
-            self.__class__.configuration_wb = WorkBook(self.__class__.configuration_wb_path)
+        self.datasheet_args = []
 
     async def __aenter__(self):
         """
@@ -116,9 +119,17 @@ class BaseTool(metaclass=Meta):
         """
         This method return the Create (FOR NEW PROGRAMS ONLY!!!) wheelpack full path, given its name
         """
-        pthlb_whp_path = Path(Config.STD_WHP_BASE_DIR).joinpath(whp_name + Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
+        pthlb_whp_path = Path(Config.STD_WHP_DIR).joinpath(whp_name + Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
         str_whp_path = str(pthlb_whp_path)
         return str_whp_path
+
+    def full_png_path(self, whp_name):
+        """
+        This method return the wheelpack PNG full path, given its name
+        """
+        pthlb_png_path = Path(Config.STD_PNG_DIR).joinpath(whp_name + Config.PNG_SUFFIX)
+        str_png_path = str(pthlb_png_path)
+        return str_png_path
 
     def full_isoeasy_path(self, isoeasy_name):
         """
@@ -128,7 +139,7 @@ class BaseTool(metaclass=Meta):
         str_isoeasy_path = str(pthlb_isoeasy_path)
         return str_isoeasy_path
 
-    def write_datasheet(self, *args):
+    def write_datasheet(self):
         """
         This method must be used in set_datasheet method.
         It Writes arguments and wheelpack names on a text file
@@ -137,16 +148,38 @@ class BaseTool(metaclass=Meta):
             # Header
             f.write(self.complete_name + " datasheet\n\n")
             # Custom arguments
-            for arg in args:
+            for arg in self.datasheet_args:
                 f.write(arg + "\n\n")
             # Wheelpacks
             f.write("Wheelpacks:\n")
-            for whp_posn, whp_name in enumerate(self.whp_names_list):
-                f.write(str(whp_posn + 1) + ") " + (whp_name) + "\n")
+            for whp_name in self.whp_names_list:
+                f.write(whp_name)
+
+    def create_shortcut(self, source_raw_path, shortcut_raw_path):
+        source_path = str(source_raw_path)
+        shortcut_path = str(shortcut_raw_path)
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortcut(shortcut_path)
+        shortcut.TargetPath = source_path
+        shortcut.IconLocation = source_path
+        shortcut.Save()
+
+    def create_whp_png_shortcut(self, whp_name):
+        str_png_path = self.full_png_path(whp_name)
+        pthlb_shorcut_path = Path(self.res_prog_dir).joinpath(whp_name + ".lnk")
+        str_shorcut_path = str(pthlb_shorcut_path)
+        self.create_shortcut(str_png_path, str_shorcut_path)
 
     @try_more_times
     async def load_tool(self, raw_path):
         await self.vgpc.load_tool(raw_path)
+
+    async def load_wheel(self, whp_name, whp_posn):
+        whp_path = self.full_whp_path(whp_name)
+        await self.vgpc.load_wheel(whp_path, whp_posn)
+        whp_pos_name = str(whp_posn) + ") " + (whp_name) + "\n"
+        self.whp_names_list.append(whp_pos_name)
+        self.create_whp_png_shortcut(whp_name)
 
 
     async def create(self):
@@ -157,6 +190,7 @@ class BaseTool(metaclass=Meta):
         await self.set_wheels()
         await self.set_isoeasy()
         self.set_datasheet()
+        self.write_datasheet()
 
     def error_list(self, err_id):
         """

@@ -17,10 +17,15 @@ import inspect
 import asyncio
 import logging
 
+from autoprogram.errors import *
 from autoprogram.config import Config
 from autoprogram.vgpro import VgpWrapper
-from autoprogram import tools
-from autoprogram.errors import *
+
+try:
+    from autoprogram import tools
+except WrongCreateFileName:
+    messagebox.showerror("Worksheet Error", "Wrong create file name.")
+
 from autoprogram.common import try_more_times
 
 # Set gui logging level to INFO
@@ -239,7 +244,7 @@ class CreatePage(tk.Frame):
         self.rowconfigure(0, minsize=45)
         # Emergency Stop
         self.loadimage = tk.PhotoImage(file="autoprogram/icons/emergency_stop.png")
-        self.emergency_stop = tk.Button(self, image=self.loadimage, command=self.quit)
+        self.emergency_stop = tk.Button(self, image=self.loadimage, command=lambda: threading.Thread(target=self.emergency_stop_method).start())
         self.emergency_stop["bg"] = "white"
         self.emergency_stop["border"] = "0"
         self.emergency_stop.place(x=120,y=100)
@@ -256,6 +261,9 @@ class CreatePage(tk.Frame):
     def run(self):
         asyncio.run(self.run_coroutine())
 
+    def emergency_stop_method(self):
+        asyncio.run(self.vgpw.__aexit__(None, None, None))
+
     async def run_coroutine(self):
             if SelectModePage.mode == Config.MODES[0]: # manual
                 await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
@@ -264,8 +272,11 @@ class CreatePage(tk.Frame):
 
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
-            async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
-                await tool.create()
+            try:
+                async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
+                    await tool.create()
+            except WrongConfigurationFileName:
+                messagebox.showerror("Worksheet Error", "Wrong configuration file name.")
             
 
     async def create_many_tools(self):
@@ -273,7 +284,10 @@ class CreatePage(tk.Frame):
         for idx, row in df.iterrows():
             name = row.loc["name"]
             params_list = row.filter(like="params").tolist()
-            await self.create_one_tool(name, params_list)
+            try:
+                await self.create_one_tool(name, params_list)
+            except AutoprogramError as ae:
+                messagebox.showerror("Auto Mode Error", ae)
 
     def next_button_method(self):
         self.controller.show_frame(SelectModePage)

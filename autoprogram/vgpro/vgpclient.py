@@ -162,14 +162,18 @@ class VgpClient:
         """
         Method that loads the specified .vgp file
         """
-        str_path = str(raw_path)
-        ua_str_path = ua.Variant(str_path, ua.VariantType.String)
-        parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
-        try:
-            await parent_node.call_method("LoadFile", ua_str_path)
-        except ua.uaerrors._auto.Bad:
-            self.error_list(6, str_path)
-        _logger.info(f"File loaded: {str_path}")
+        pthlb_path = Path(raw_path)
+        if not pthlb_path.is_file():
+            self.error_list(6, raw_path)
+        else:
+            str_path = str(raw_path)
+            ua_str_path = ua.Variant(str_path, ua.VariantType.String)
+            parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
+            try:
+                await parent_node.call_method("LoadFile", ua_str_path)
+            except ua.uaerrors._auto.Bad:
+                self.error_list(6, str_path)
+            _logger.info(f"File loaded: {str_path}")
 
 
     @wait_till_ready

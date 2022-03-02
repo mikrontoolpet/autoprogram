@@ -16,7 +16,7 @@ class WorkBook:
         """
         _logger.info(f"Reading the excel file {path}")
         try:
-            self.wb = pd.read_excel(path, sheet_name=None)
+            self.wb = pd.read_excel(path, sheet_name=None, keep_default_na=False, na_filter=False)
         except FileNotFoundError:
             self.error_list(3)
         _logger.info("Excel file read!")

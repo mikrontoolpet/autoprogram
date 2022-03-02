@@ -24,7 +24,7 @@ class Tool(BaseTool):
         self.fl_len = float(flute_length)
 
         # Check the input parameters boundary
-        self.check_boundary(self.diam, 1, 6.35)
+        self.check_boundary(self.diam, 1, 6.4)
         self.check_boundary(self.fl_len, 6*self.diam, 17.999*self.diam)
 
     async def set_parameters(self):
@@ -308,31 +308,20 @@ class Tool(BaseTool):
         """
         # Load wheelpack 1
         whp_name = self.configuration_wb.lookup("wheelpacks_1_3", "diameter", self.diam, "wheelpack_1")
-        whp_path = self.full_whp_path(whp_name)
-        await self.vgpc.load_wheel(whp_path, 1)
-        self.whp_names_list.append(whp_name)
+        await self.load_wheel(whp_name, 1)
         # Load wheelpack 2
         whp_name = self.configuration_wb.lookup("wheelpacks_1_3", "diameter", self.diam, "wheelpack_2")
-        whp_path = self.full_whp_path(whp_name)
-        await self.vgpc.load_wheel(whp_path, 2)
-        self.whp_names_list.append(whp_name)
+        await self.load_wheel(whp_name, 2)
         # Skip wheelpack 3
-        self.whp_names_list.append("")
         # Load wheelpack 4
         whp_name = self.configuration_wb.lookup("wheelpack_4", "diameter", self.diam, "wheelpack_4")
-        whp_path = self.full_whp_path(whp_name)
-        await self.vgpc.load_wheel(whp_path, 4)
-        self.whp_names_list.append(whp_name)
+        await self.load_wheel(whp_name, 4)
         # Load wheelpack 5
         whp_name = self.configuration_wb.lookup("wheelpack_5", "diameter", self.diam, "wheelpack_5")
-        whp_path = self.full_whp_path(whp_name)
-        await self.vgpc.load_wheel(whp_path, 5)
-        self.whp_names_list.append(whp_name)
+        await self.load_wheel(whp_name, 5)
         # Load wheelpack 6
         whp_name = self.configuration_wb.lookup("wheelpack_6", "diameter", self.diam, "wheelpack_6")
-        whp_path = self.full_whp_path(whp_name)
-        await self.vgpc.load_wheel(whp_path, 6)
-        self.whp_names_list.append(whp_name)
+        await self.load_wheel(whp_name, 6)
 
         # Set wheel segments for wheelpack 1
         # S_G1
@@ -393,7 +382,7 @@ class Tool(BaseTool):
 
     def set_datasheet(self):
         """
-        Write information on datasheet
+        Write additional information on datasheet
         """
         if (self.fl_len/self.diam - 3) <= 6:
             support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_6xd")
@@ -401,4 +390,4 @@ class Tool(BaseTool):
             support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_10xd")
 
         support_len_text = "Support length: " + str(support_len) + " mm"
-        self.write_datasheet(support_len_text)
+        self.datasheet_args.append(support_len_text)

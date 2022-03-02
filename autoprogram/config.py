@@ -5,9 +5,12 @@ class Config(object):
 	RES_PROGS_DIR = "C:/RES"
 	WHILE_WAIT_PERIOD = 1.2 # seconds
 	APP_STATE_SUB_PERIOD = 100 # milliseconds
-	STD_WHP_BASE_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWS_R628XW\Create"	
-	CUST_WHP_BASE_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWI_R628XW\Create"
+	STD_WHP_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWS_R628XW\Create"
+	STD_PNG_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWS_R628XW\PNG"
+	# CUST_WHP_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWI_R628XW\Create"
+	# CUST_PNG_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWI_R628XW\PNG"
 	WHP_SUFFIX = ".whs"
+	PNG_SUFFIX = ".png"
 	VGP_SUFFIX = ".vgp"
 	ISOEASY_SUFFIX = ".vgpx"
 	SERVER_URL = "opc.tcp://localhost:8996/"
