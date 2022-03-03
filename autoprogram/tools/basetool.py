@@ -9,6 +9,7 @@ from autoprogram.wbhandler import WorkBook
 from autoprogram.config import Config
 from autoprogram.common import try_more_times
 
+
 logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class Meta(type):
             cls.isoeasy_dir = cls.family_dir.joinpath(Config.ISOEASY_DIR)
             # Read common worksheet
             cls.common_wb = WorkBook(Config.COMMON_WB_PATH)
-            # Read create filee
+            # Read create file
             try:
                 create_wb_path = cls.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
                 create_dict = WorkBook(create_wb_path).wb
@@ -186,11 +187,14 @@ class BaseTool(metaclass=Meta):
         """
         Wrap the three methods necessary to create the tool
         """
-        await self.set_parameters()
-        await self.set_wheels()
-        await self.set_isoeasy()
-        self.set_datasheet()
-        self.write_datasheet()
+        try:
+            await self.set_parameters()
+            await self.set_wheels()
+            await self.set_isoeasy()
+            self.set_datasheet()
+            self.write_datasheet()
+        except IndexError:
+            raise WbSheetOrColumnNameError
 
     def error_list(self, err_id):
         """

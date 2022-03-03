@@ -14,3 +14,6 @@ class WrongCreateFileName(AutoprogramError):
 
 class WrongConfigurationFileName(AutoprogramError):
     """Wrong create file name"""
+
+class WbSheetOrColumnNameError(AutoprogramError):
+    pass

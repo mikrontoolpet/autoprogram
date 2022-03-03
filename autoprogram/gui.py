@@ -20,13 +20,11 @@ import logging
 from autoprogram.errors import *
 from autoprogram.config import Config
 from autoprogram.vgpro import VgpWrapper
-
+from autoprogram.common import try_more_times
 try:
     from autoprogram import tools
 except WrongCreateFileName:
     messagebox.showerror("Worksheet Error", "Wrong create file name.")
-
-from autoprogram.common import try_more_times
 
 # Set gui logging level to INFO
 logging.basicConfig(level=logging.INFO)
@@ -270,6 +268,7 @@ class CreatePage(tk.Frame):
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
 
+    @try_more_times
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             try:
@@ -277,6 +276,8 @@ class CreatePage(tk.Frame):
                     await tool.create()
             except WrongConfigurationFileName:
                 messagebox.showerror("Worksheet Error", "Wrong configuration file name.")
+            except WbSheetOrColumnNameError:
+                messagebox.showerror("Worksheet Error", "Wrong sheet or column name.")
             
 
     async def create_many_tools(self):
@@ -284,10 +285,10 @@ class CreatePage(tk.Frame):
         for idx, row in df.iterrows():
             name = row.loc["name"]
             params_list = row.filter(like="params").tolist()
-            try:
-                await self.create_one_tool(name, params_list)
-            except AutoprogramError as ae:
-                messagebox.showerror("Auto Mode Error", ae)
+            # try:
+            await self.create_one_tool(name, params_list)
+            # except AutoprogramError as ae:
+            #     messagebox.showerror("Auto Mode Error", ae)
 
     def next_button_method(self):
         self.controller.show_frame(SelectModePage)

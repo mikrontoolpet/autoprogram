@@ -15,7 +15,9 @@ def try_more_times(coro):
                 res = await asyncio.wait_for(coro(*args, **kwargs), TIMEOUT)
                 return res
                 successful = True
-            except Exception:
+            except AutoprogramError as ae:
+                raise ae
+            except Exception as e:
                 attempt += 1
             await asyncio.sleep(WAIT_PERIOD)
 
