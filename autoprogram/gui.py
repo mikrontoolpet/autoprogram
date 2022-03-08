@@ -268,16 +268,14 @@ class CreatePage(tk.Frame):
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
 
-    @try_more_times
+    #@try_more_times
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             try:
                 async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
                     await tool.create()
-            except WrongConfigurationFileName:
-                messagebox.showerror("Worksheet Error", "Wrong configuration file name.")
-            except WbSheetOrColumnNameError:
-                messagebox.showerror("Worksheet Error", "Wrong sheet or column name.")
+            except AutoprogramError as ae:
+                messagebox.showerror("Autoprogram Error", ae)
             
 
     async def create_many_tools(self):
@@ -285,10 +283,7 @@ class CreatePage(tk.Frame):
         for idx, row in df.iterrows():
             name = row.loc["name"]
             params_list = row.filter(like="params").tolist()
-            # try:
             await self.create_one_tool(name, params_list)
-            # except AutoprogramError as ae:
-            #     messagebox.showerror("Auto Mode Error", ae)
 
     def next_button_method(self):
         self.controller.show_frame(SelectModePage)

@@ -11,9 +11,14 @@ class TryMoreTimesFailed(AutoprogramError):
 
 class WrongCreateFileName(AutoprogramError):
     """Wrong create file name"""
+    pass
 
 class WrongConfigurationFileName(AutoprogramError):
     """Wrong create file name"""
+    pass
 
 class WbSheetOrColumnNameError(AutoprogramError):
+    pass
+
+class InputParameterOutOfBoundary(AutoprogramError):
     pass
