@@ -120,11 +120,9 @@ class Tool(BaseTool):
 
         # Flute 201 (S_G1)
         s_g1_att_ang = self.configuration_wb.trend("function_data", "diameter", self.diam, "S_G1_attack_angle")
-        s_g1_wh_disp = self.configuration_wb.trend("function_data", "diameter", self.diam, "S_G1_wheel_displacement")
         rs = -0.025*self.diam
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", rs)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Attack Angle", s_g1_att_ang)
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel Displacement", s_g1_wh_disp)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/dL Start", front_dl_start)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/dL End", 1.6*self.diam)
         # Feeds and speeds
@@ -168,9 +166,7 @@ class Tool(BaseTool):
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Straight Gash/Feed along sweep+exit", tn3_feedrate)
 
         # Gash 201 (TN1)
-        tn1_index = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN1_gash_rotation")
         tn1_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "TN1_web_thickness")
-        await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Gash Rotation", tn1_index)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Web Thickness", tn1_web_thck)
         await self.vgpc.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Depth Past Center Yp", -0.2*self.diam)
         # Feeds and speeds

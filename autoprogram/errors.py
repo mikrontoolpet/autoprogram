@@ -21,4 +21,6 @@ class WbSheetOrColumnNameError(AutoprogramError):
     pass
 
 class InputParameterOutOfBoundary(AutoprogramError):
-    pass
+    def __init__(self, value):
+        message = f"The value {value} is out of boundary"
+        super().__init__(message)

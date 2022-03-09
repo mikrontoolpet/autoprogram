@@ -114,7 +114,7 @@ class BaseTool(metaclass=Meta):
         lower and the upper boundaries
         """
         if arg < low_bound or arg > up_bound:
-            raise InputParameterOutOfBoundary
+            raise InputParameterOutOfBoundary(arg)
 
     def full_whp_path(self, whp_name):
         """
