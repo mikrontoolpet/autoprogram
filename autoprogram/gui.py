@@ -124,8 +124,12 @@ class SelectFamilyPage(tk.Frame):
 
     def next_button_method(self):
         # Set the selected tool class
-        SelectFamilyPage.ToolClass = InitializingPage.family_dict[self.family_address.get()]
-        self.controller.show_frame(SelectModePage)
+        try:
+            family_address_var = self.family_address.get()
+            SelectFamilyPage.ToolClass = InitializingPage.family_dict[family_address_var]
+            self.controller.show_frame(SelectModePage)
+        except KeyError:
+            messagebox.showerror("User Entry Error", f"No such a tool family: {family_address_var}")
 
     def back_button_method(self):
         self.controller.show_frame(InitializingPage)
@@ -156,19 +160,15 @@ class SelectModePage(tk.Frame):
     def run(self):
         pass
 
-    def set_mode(self):
+    def next_button_method(self):
         try:
             SelectModePage.mode = self.listbox.get(self.listbox.curselection())
-            self.controller.show_frame(InsertArgumentsPage)
+            if SelectModePage.mode == Config.MODES[0]: # manual
+                self.controller.show_frame(InsertArgumentsPage)
+            elif SelectModePage.mode == Config.MODES[1]: # auto
+                self.controller.show_frame(CreatePage)
         except TclError:
-            messagebox.showwarning(title="No choice error", message="Please select mode")
-
-    def next_button_method(self):
-        self.set_mode()
-        if SelectModePage.mode == Config.MODES[0]: # manual
-            self.controller.show_frame(InsertArgumentsPage)
-        elif SelectModePage.mode == Config.MODES[1]: # auto
-            self.controller.show_frame(CreatePage)
+            messagebox.showwarning(title="No choice error", message="Please select mode") 
 
     def back_button_method(self):
         self.controller.show_frame(SelectFamilyPage)
@@ -268,16 +268,17 @@ class CreatePage(tk.Frame):
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
 
-    #@try_more_times
+    @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=Exception)
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             try:
                 async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
                     await tool.create()
+            # If an AutoprogramError is raised, an error message is prompted,
+            # otherwise is left to the try_more_times decorator
             except AutoprogramError as ae:
                 messagebox.showerror("Autoprogram Error", ae)
             
-
     async def create_many_tools(self):
         df = SelectFamilyPage.ToolClass.create_wb
         for idx, row in df.iterrows():

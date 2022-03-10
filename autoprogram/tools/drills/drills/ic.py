@@ -43,7 +43,7 @@ class Tool(BaseTool):
         neck_diam = round(self.diam - conic_len*(1/back_taper), DEC_DIGITS)
         tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len_6_14xd") + end_stk_rmv
 
-        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter", self.diam)
+        await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diametero", self.diam)
         await self.vgpc.set("ns=2;s=tool/Blank/Profile/Diameter neck", neck_diam)
         await self.vgpc.set("ns=2;s=tool/Blank/Profile/Length total", tot_len)
 

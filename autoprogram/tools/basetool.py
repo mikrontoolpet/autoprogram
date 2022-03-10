@@ -83,7 +83,12 @@ class BaseTool(metaclass=Meta):
         self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".txt")
 
         shutil.copyfile(self.master_prog_path, self.res_prog_path)
-        await self.load_tool(self.res_prog_path)
+
+        try:
+            await self.load_tool(self.res_prog_path)
+        except TryMoreTimesFailed:
+            raise LoadToolFailed
+
         await self.vgpc.save_tool(self.res_prog_path)
         await self.vgpc.delete_all_flanges()
         return self # very important!!!
@@ -171,7 +176,7 @@ class BaseTool(metaclass=Meta):
         str_shorcut_path = str(pthlb_shorcut_path)
         self.create_shortcut(str_png_path, str_shorcut_path)
 
-    @try_more_times
+    @try_more_times(max_attempts=10, timeout=30, wait_period=1, retry_exception=ValueError)
     async def load_tool(self, raw_path):
         await self.vgpc.load_tool(raw_path)
 
@@ -195,12 +200,3 @@ class BaseTool(metaclass=Meta):
             self.write_datasheet()
         except IndexError:
             raise WbSheetOrColumnNameError
-
-    def error_list(self, err_id):
-        """
-        In case of error
-        """
-        if err_id == 0:
-            raise ValueError("The input argument is out of boundary.")
-        if err_id == 1:
-            raise FileNotFoundError("Load tool max attempts exceeded.")

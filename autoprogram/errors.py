@@ -24,3 +24,9 @@ class InputParameterOutOfBoundary(AutoprogramError):
     def __init__(self, value):
         message = f"The value {value} is out of boundary"
         super().__init__(message)
+
+class RConnectError(Exception):
+    pass
+
+class LoadToolFailed(RConnectError):
+    pass
