@@ -263,10 +263,13 @@ class CreatePage(tk.Frame):
         asyncio.run(self.vgpw.__aexit__(None, None, None))
 
     async def run_coroutine(self):
+        try:
             if SelectModePage.mode == Config.MODES[0]: # manual
                 await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
+        except TryMoreTimesFailed:
+            messagebox.showerror("Autoprogram Error", "Unhandled error occurred.")
 
     @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=Exception)
     async def create_one_tool(self, name, params_list):

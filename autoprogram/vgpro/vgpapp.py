@@ -1,4 +1,4 @@
-import subprocess
+from subprocess import Popen, PIPE
 import logging
 import time
 
@@ -45,7 +45,7 @@ class VgpApp:
 
         vgp_app_target = Config.VGPRO_EXE_PATH + " -Machine " + mach_arg + " -SilentMode true"
         _logger.info("Starting the VgProapplication: " + vgp_app_target)
-        self.p = subprocess.Popen(vgp_app_target)
+        self.p = Popen(vgp_app_target, stdout=PIPE, stderr=PIPE, encoding='utf8', errors='ignore')
         self.p.__enter__()
         _logger.info(vgp_app_target + " application started!")
 
