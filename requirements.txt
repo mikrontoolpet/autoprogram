@@ -16,7 +16,6 @@ jdcal==1.4.1
 numpy==1.22.3
 openpyxl==3.0.9
 pandas==1.4.2
-pathlib==1.0.1
 pefile==2021.9.3
 platformdirs==2.5.1
 pycparser==2.21
