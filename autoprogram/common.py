@@ -24,7 +24,6 @@ def try_more_times(max_attempts=5, timeout=600, wait_period=1, retry_exception=E
                     successful = True
                 except retry_exception as e:
                     attempt += 1
-                    _logger.error(e)
                 await asyncio.sleep(wait_period)
 
             if attempt > max_attempts:

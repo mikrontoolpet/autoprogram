@@ -253,7 +253,7 @@ class VgpClient:
         await parent_node.call_method("CloseFile")
 
     @wait_till_ready
-    async def get(self, nodeid):
+    async def read(self, nodeid):
         """
         1) Read the value as it is
         2) Try to convert to float, otherwise leave it as it is
@@ -276,7 +276,7 @@ class VgpClient:
             self.error_list(5, nodeid)
 
     @wait_till_ready
-    async def set(self, nodeid, raw_val):
+    async def write(self, nodeid, raw_val):
         """
         Set the value after formatting the input to the correct opc-ua
         data type:

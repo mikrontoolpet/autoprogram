@@ -80,7 +80,7 @@ class InitializingPage(tk.Frame):
 
     def run(self):
         InitializingPage.family_dict = {}
-        for T in (tools.drills.drills.titaniumg5.Tool, tools.drills.drills.ic.Tool): # new tool classes must be added here
+        for T in (tools.drills.drills.atc.Tool,): # new tool classes must be added here
             InitializingPage.family_dict[T.family_address] = T
         self.init_label.config(text="Tool families initialized!")
 
@@ -269,18 +269,14 @@ class CreatePage(tk.Frame):
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
         except TryMoreTimesFailed:
-            messagebox.showerror("Autoprogram Error", "Unhandled error occurred.")
+            messagebox.showerror("Autoprogram Error", "Try more times failed")
+            _logger.error("Unhandled exception occurred.")
 
-    @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=Exception)
+    @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=AutoprogramError)
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
-            try:
-                async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
-                    await tool.create()
-            # If an AutoprogramError is raised, an error message is prompted,
-            # otherwise is left to the try_more_times decorator
-            except AutoprogramError as ae:
-                messagebox.showerror("Autoprogram Error", ae)
+            async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class
+                await tool.create()
             
     async def create_many_tools(self):
         df = SelectFamilyPage.ToolClass.create_wb

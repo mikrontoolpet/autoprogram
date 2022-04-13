@@ -1,5 +1,7 @@
 import shutil
 import asyncio
+import numpy as np
+import pandas as pd
 from pathlib import Path
 import win32com.client
 import logging
@@ -12,6 +14,9 @@ from autoprogram.common import try_more_times
 
 logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
+
+
+MAX_ASYNC_REQUESTS = 1
 
 class Meta(type):
     """
@@ -30,6 +35,8 @@ class Meta(type):
                 raise AttributeError("Tool class without set_parameters method.")
             if not "set_wheels" in attrs:
                 raise AttributeError("Tool class without set_wheels method.")
+            if not "set_wheel_segments" in attrs:
+                raise AttributeError("Tool class without set_wheels method.")
             if not "set_isoeasy" in attrs:
                 raise AttributeError("Tool class without set_isoeasy method.")
             if not "set_datasheet" in attrs:
@@ -39,6 +46,7 @@ class Meta(type):
             cls.master_prog_path = cls.family_dir.joinpath(Config.MASTER_PROG_DIR, Config.MASTER_PROG_NAME + "_" + cls.machine + Config.VGP_SUFFIX)
             cls.worksheets_dir = cls.family_dir.joinpath(Config.WORKSHEETS_DIR)
             cls.isoeasy_dir = cls.family_dir.joinpath(Config.ISOEASY_DIR)
+            cls.images_dir = cls.family_dir.joinpath(Config.IMAGES_DIR)
             # Read common worksheet
             cls.common_wb = WorkBook(Config.COMMON_WB_PATH)
             # Read create file
@@ -63,8 +71,11 @@ class BaseTool(metaclass=Meta):
     def __init__(self, vgp_client, name):
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
-        self.whp_names_list = []
-        self.datasheet_args = []
+        self.params_list = []
+        self.whp_n_posn_list = []
+        self.isoeasy_name = None
+        self.ds_text_args = []
+        self.ds_img_names = []
 
     async def __aenter__(self):
         """
@@ -121,45 +132,65 @@ class BaseTool(metaclass=Meta):
         if arg < low_bound or arg > up_bound:
             raise InputParameterOutOfBoundary(arg)
 
-    def full_whp_path(self, whp_name):
+    @try_more_times(max_attempts=10, timeout=30, wait_period=1, retry_exception=ValueError)
+    async def load_tool(self, raw_path):
+        await self.vgpc.load_tool(raw_path)
+
+    def set(self, nodeid, raw_val):
         """
-        This method return the Create (FOR NEW PROGRAMS ONLY!!!) wheelpack full path, given its name
+        Store nodeid and raw value in a list
         """
-        pthlb_whp_path = Path(Config.STD_WHP_DIR).joinpath(whp_name + Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
+        self.params_list.append([nodeid, raw_val])
+
+    async def write_parameters(self):
+        """
+        Write asynchronously raw values in the program at the specified nodeids
+        """
+        params_df = pd.DataFrame(self.params_list, columns=['nodeid', 'raw_val'])
+        # Divide DataFrame in chunks in order to make not too many asynchronous request
+        params_df_list = [params_df[i:i + MAX_ASYNC_REQUESTS] for i in range(0, params_df.shape[0], MAX_ASYNC_REQUESTS)]
+        for params_df_chunk in params_df_list:
+            await asyncio.gather(*[self.vgpc.write(row[1].nodeid, row[1].raw_val) for row in params_df_chunk.iterrows()]) # row[1] because row[0] is the index
+
+    async def get(self, nodeid):
+        await self.vgpc.read(nodeid)
+
+    def full_pathlib_path(self, parent_dir, file_name, suffix):
+        """
+        This method returns the full pathlib path, given the file name,
+        its parent directory and its suffix
+        """
+        return Path(parent_dir).joinpath(file_name + suffix)
+
+    async def load_wheel(self, whp_name, whp_posn):
+        """
+        This method calls the opc-ua method to load a wheelpack in the selected
+        position
+        """
+        pthlb_whp_path = self.full_pathlib_path(Config.STD_WHP_DIR, whp_name, Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
         str_whp_path = str(pthlb_whp_path)
-        return str_whp_path
+        await self.vgpc.load_wheel(str_whp_path, whp_posn)
 
-    def full_png_path(self, whp_name):
+    def set_wheel(self, whp_name, whp_posn):
         """
-        This method return the wheelpack PNG full path, given its name
+        Store wheelpack name and its position in a list
         """
-        pthlb_png_path = Path(Config.STD_PNG_DIR).joinpath(whp_name + Config.PNG_SUFFIX)
-        str_png_path = str(pthlb_png_path)
-        return str_png_path
+        self.whp_n_posn_list.append([whp_name, whp_posn])
 
-    def full_isoeasy_path(self, isoeasy_name):
+    async def load_wheels(self):
         """
-        This method return full isoeasy path to be loaded, depending on the tool family
+        Load synchronously wheelpacks in the program
         """
-        pthlb_isoeasy_path = Path(self.isoeasy_dir).joinpath(isoeasy_name + Config.ISOEASY_SUFFIX)
-        str_isoeasy_path = str(pthlb_isoeasy_path)
-        return str_isoeasy_path
+        whp_n_posn_df = pd.DataFrame(self.whp_n_posn_list, columns=['whp_name', 'whp_posn'])
+        for row in whp_n_posn_df.iterrows():
+            await self.load_wheel(row[1].whp_name, row[1].whp_posn)
 
-    def write_datasheet(self):
+    async def load_isoeasy(self):
         """
-        This method must be used in set_datasheet method.
-        It Writes arguments and wheelpack names on a text file
+        Load specified isoeasy program
         """
-        with open(self.datasheet_path, 'w') as f:
-            # Header
-            f.write(self.complete_name + " datasheet\n\n")
-            # Custom arguments
-            for arg in self.datasheet_args:
-                f.write(arg + "\n\n")
-            # Wheelpacks
-            f.write("Wheelpacks:\n")
-            for whp_name in self.whp_names_list:
-                f.write(whp_name)
+        str_full_isoeasy_path = str(self.full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
+        await self.vgpc.load_isoeasy(str_full_isoeasy_path)
 
     def create_shortcut(self, source_raw_path, shortcut_raw_path):
         source_path = str(source_raw_path)
@@ -170,33 +201,50 @@ class BaseTool(metaclass=Meta):
         shortcut.IconLocation = source_path
         shortcut.Save()
 
+    def create_res_shortcut_from_file_name(self, parent_dir, file_name, file_suffix):
+        pthlb_source_full_path = self.full_pathlib_path(parent_dir, file_name, file_suffix)
+        pthlb_shorcut_path = Path(self.res_prog_dir).joinpath(file_name + ".lnk")
+        self.create_shortcut(pthlb_source_full_path, pthlb_shorcut_path)
+
     def create_whp_png_shortcut(self, whp_name):
-        str_png_path = self.full_png_path(whp_name)
-        pthlb_shorcut_path = Path(self.res_prog_dir).joinpath(whp_name + ".lnk")
-        str_shorcut_path = str(pthlb_shorcut_path)
-        self.create_shortcut(str_png_path, str_shorcut_path)
+        self.create_res_shortcut_from_file_name(Config.STD_PNG_DIR, whp_name, Config.PNG_SUFFIX)
 
-    @try_more_times(max_attempts=10, timeout=30, wait_period=1, retry_exception=ValueError)
-    async def load_tool(self, raw_path):
-        await self.vgpc.load_tool(raw_path)
+    def create_img_png_shortcut(self, img_name):
+        self.create_res_shortcut_from_file_name(self.images_dir, img_name, Config.PNG_SUFFIX)
 
-    async def load_wheel(self, whp_name, whp_posn):
-        whp_path = self.full_whp_path(whp_name)
-        await self.vgpc.load_wheel(whp_path, whp_posn)
-        whp_pos_name = str(whp_posn) + ") " + (whp_name) + "\n"
-        self.whp_names_list.append(whp_pos_name)
-        self.create_whp_png_shortcut(whp_name)
-
+    def write_datasheet(self):
+        """
+        This method must be used in set_datasheet method.
+        It Writes arguments and wheelpack names on a text file
+        """
+        with open(self.datasheet_path, 'w') as f:
+            # Datasheet header
+            f.write(self.complete_name + " datasheet\n\n")
+            # Datasheet custom arguments
+            for text_arg in self.ds_text_args:
+                f.write(text_arg + "\n\n")
+            # Datasheet images
+            for img_name in self.ds_img_names:
+                self.create_img_png_shortcut(img_name)
+            # Wheelpacks position and name
+            f.write("Wheelpacks:\n")
+            for whp_n_posn in self.whp_n_posn_list:
+                str_whp_n_posn = str(whp_n_posn[1]) + ") " + str(whp_n_posn[0]) + "\n"
+                f.write(str_whp_n_posn)
+                self.create_whp_png_shortcut(whp_n_posn[0])
 
     async def create(self):
         """
-        Wrap the three methods necessary to create the tool
+        Wrap the methods necessary to create the tool
         """
-        try:
-            await self.set_parameters()
-            await self.set_wheels()
-            await self.set_isoeasy()
-            self.set_datasheet()
-            self.write_datasheet()
-        except IndexError:
-            raise WbSheetOrColumnNameError
+        self.set_parameters()
+        await self.write_parameters()
+        self.set_wheels()
+        await self.load_wheels()
+        self.params_list = [] # needed by set_wheel_segments to have an empty list to append to
+        self.set_wheel_segments()
+        await self.write_parameters()
+        self.set_isoeasy()
+        await self.load_isoeasy()
+        self.set_datasheet()
+        self.write_datasheet()

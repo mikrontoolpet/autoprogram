@@ -17,6 +17,7 @@ class Config(object):
 	MASTER_PROG_DIR = "master_programs"
 	COMMON_FILE_DIR = "common"
 	ISOEASY_DIR = "isoeasy"
+	IMAGES_DIR = "images"
 	WORKSHEETS_DIR = "worksheets"
 	CONFIG_FILE_NAME = "configuration_file.xlsx"
 	CREATE_FILE_NAME = "create_file.xlsx"
