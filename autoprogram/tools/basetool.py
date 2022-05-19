@@ -36,7 +36,7 @@ class Meta(type):
             if not "set_wheels" in attrs:
                 raise AttributeError("Tool class without set_wheels method.")
             if not "set_wheel_segments" in attrs:
-                raise AttributeError("Tool class without set_wheels method.")
+                raise AttributeError("Tool class without set_wheel_segments method.")
             if not "set_isoeasy" in attrs:
                 raise AttributeError("Tool class without set_isoeasy method.")
             if not "set_datasheet" in attrs:
