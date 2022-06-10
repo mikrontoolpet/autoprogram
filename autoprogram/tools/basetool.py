@@ -8,6 +8,7 @@ import logging
 
 from autoprogram.errors import *
 from autoprogram.wbhandler import WorkBook
+from autoprogram.dshandler import DataSheet
 from autoprogram.config import Config
 from autoprogram.common import try_more_times
 
@@ -91,7 +92,7 @@ class BaseTool(metaclass=Meta):
 
     
         self.res_prog_path = self.res_prog_dir.joinpath(self.complete_name + Config.VGP_SUFFIX)
-        self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".txt")
+        self.datasheet_path = self.res_prog_dir.joinpath("DS_" + self.complete_name + ".docx")
 
         shutil.copyfile(self.master_prog_path, self.res_prog_path)
 
@@ -189,8 +190,9 @@ class BaseTool(metaclass=Meta):
         """
         Load specified isoeasy program
         """
-        str_full_isoeasy_path = str(self.full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
-        await self.vgpc.load_isoeasy(str_full_isoeasy_path)
+        if self.isoeasy_name is not None:
+            str_full_isoeasy_path = str(self.full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
+            await self.vgpc.load_isoeasy(str_full_isoeasy_path)
 
     def create_shortcut(self, source_raw_path, shortcut_raw_path):
         source_path = str(source_raw_path)
@@ -203,48 +205,46 @@ class BaseTool(metaclass=Meta):
 
     def create_res_shortcut_from_file_name(self, parent_dir, file_name, file_suffix):
         pthlb_source_full_path = self.full_pathlib_path(parent_dir, file_name, file_suffix)
-        pthlb_shorcut_path = Path(self.res_prog_dir).joinpath(file_name + ".lnk")
-        self.create_shortcut(pthlb_source_full_path, pthlb_shorcut_path)
+        pthlb_shortcut_path = Path(self.res_prog_dir).joinpath(file_name + ".lnk")
+        self.create_shortcut(pthlb_source_full_path, pthlb_shortcut_path)
 
     def create_whp_png_shortcut(self, whp_name):
         self.create_res_shortcut_from_file_name(Config.STD_PNG_DIR, whp_name, Config.PNG_SUFFIX)
-
-    def create_img_png_shortcut(self, img_name):
-        self.create_res_shortcut_from_file_name(self.images_dir, img_name, Config.PNG_SUFFIX)
 
     def write_datasheet(self):
         """
         This method must be used in set_datasheet method.
         It Writes arguments and wheelpack names on a text file
         """
-        with open(self.datasheet_path, 'w') as f:
+        with DataSheet(self.datasheet_path) as ds:
             # Datasheet header
-            f.write(self.complete_name + " datasheet\n\n")
-            # Datasheet custom arguments
-            for text_arg in self.ds_text_args:
-                f.write(text_arg + "\n\n")
+            ds.add_heading(self.complete_name + " Datasheet")
+            # Datasheet custom text
+            if self.ds_text_args is not None:
+                ds.add_text_arguments(self.ds_text_args)
             # Datasheet images
-            for img_name in self.ds_img_names:
-                self.create_img_png_shortcut(img_name)
+            # Convert names to full paths
+            if self.ds_img_names is not None:
+                ds_img_paths = [self.full_pathlib_path(self.images_dir, img_name, Config.PNG_SUFFIX) for img_name in self.ds_img_names]
+                ds.add_pictures(ds_img_paths, 80, 80)
             # Wheelpacks position and name
-            f.write("Wheelpacks:\n")
-            for whp_n_posn in self.whp_n_posn_list:
-                str_whp_n_posn = str(whp_n_posn[1]) + ") " + str(whp_n_posn[0]) + "\n"
-                f.write(str_whp_n_posn)
-                self.create_whp_png_shortcut(whp_n_posn[0])
+            ds.add_wheelpacks_table(self.whp_n_posn_list)
 
     async def create(self):
         """
         Wrap the methods necessary to create the tool
         """
-        self.set_parameters()
-        await self.write_parameters()
+        # self.set_parameters()
+        # await self.write_parameters()
         self.set_wheels()
-        await self.load_wheels()
+        # await self.load_wheels()
         self.params_list = [] # needed by set_wheel_segments to have an empty list to append to
-        self.set_wheel_segments()
-        await self.write_parameters()
-        self.set_isoeasy()
-        await self.load_isoeasy()
+        # self.set_wheel_segments()
+        # await self.write_parameters()
+        # self.set_isoeasy()
+        # await self.load_isoeasy()
         self.set_datasheet()
         self.write_datasheet()
+        # Create wheelpacks png shortcuts
+        for whp, posn in self.whp_n_posn_list:
+            self.create_whp_png_shortcut(whp)

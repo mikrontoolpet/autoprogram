@@ -28,27 +28,10 @@ class Tool(BaseTool):
     def set_parameters(self):
 
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
-
-        # Blank
-        # # Profile
-        # conic_len = 4.25*self.diam
-        # conic_len_p4 = conic_len + end_stk_rmv
-        # back_taper = 200
-        # neck_diam = self.diam - conic_len*(1/back_taper)
-        # fillet_rad = 0.1# round(0.5*self.diam, 3)
-        # shank_diam = self.configuration_wb.lookup("blank", "diameter", self.diam, "shank_diameter")
-        # tang_len = self.fl_len + 0.1*self.diam + end_stk_rmv
         lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len")
-
         self.set("ns=2;s=tool/Blank/Profile/D", self.diam)
         self.set("ns=2;s=tool/Blank/Profile/L", tot_len)
-        # self.set("ns=2;s=tool/Blank/Profile/Diameter", self.diam)
-        # self.set("ns=2;s=tool/Blank/Profile/Diameter neck", neck_diam)
-        # self.set("ns=2;s=tool/Blank/Profile/Diameter shank", shank_diam)
-        # self.set("ns=2;s=tool/Blank/Profile/Length tangent", tang_len)
-        # self.set("ns=2;s=tool/Blank/Profile/Radius", fillet_rad)
-        # self.set("ns=2;s=tool/Blank/Profile/Length total", tot_len)
 
         # Coolant holes
         # Group 1
@@ -381,13 +364,20 @@ class Tool(BaseTool):
         """
         Write additional information on datasheet
         """
+        # Text
         if (self.fl_len/self.diam - 3) <= 6:
             support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_6xd")
         else:
             support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_10xd")
         support_len = round(support_len)
-
         support_len_text = "Support length: " + str(support_len) + " mm"
-        support_len_img_name = str(support_len) + "mm"
+        coolant_text = "Attention to the coolant pipes position!!!"
+
         self.ds_text_args.append(support_len_text)
+
+        # Images
+        support_len_img_name = str(support_len) + "mm"
+        coolant_img_name = "coolant"
+
         self.ds_img_names.append(support_len_img_name)
+        self.ds_img_names.append(coolant_img_name)

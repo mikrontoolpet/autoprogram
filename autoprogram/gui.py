@@ -80,7 +80,7 @@ class InitializingPage(tk.Frame):
 
     def run(self):
         InitializingPage.family_dict = {}
-        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool): # new tool classes must be added here
+        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool, tools.drills.step_drills.ic.Tool): # new tool classes must be added here
             InitializingPage.family_dict[T.family_address] = T
         self.init_label.config(text="Tool families initialized!")
 
