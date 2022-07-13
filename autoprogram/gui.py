@@ -80,7 +80,7 @@ class InitializingPage(tk.Frame):
 
     def run(self):
         InitializingPage.family_dict = {}
-        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool, tools.drills.step_drills.ic.Tool): # new tool classes must be added here
+        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool, tools.drills.step_drills.ic.Tool, tools.drills.step_drills.atc.Tool): # new tool classes must be added here
             InitializingPage.family_dict[T.family_address] = T
         self.init_label.config(text="Tool families initialized!")
 
@@ -268,11 +268,11 @@ class CreatePage(tk.Frame):
                 await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
             elif SelectModePage.mode == Config.MODES[1]: # auto
                 await self.create_many_tools()
-        except TryMoreTimesFailed:
-            messagebox.showerror("Autoprogram Error", "Try more times failed")
-            _logger.error("Unhandled exception occurred.")
+        except Exception as e:
+            messagebox.showerror("Autoprogram Error", e)
+            _logger.error(e)
 
-    @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=AutoprogramError)
+    @try_more_times(max_attempts=5, timeout=800, wait_period=1, stop_exception=AutoprogramError)
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class

@@ -19,6 +19,7 @@ _logger = logging.getLogger(__name__)
 
 MAX_ASYNC_REQUESTS = 1
 
+
 class Meta(type):
     """
     Metaclass defined in order to assess that the tool classes have determined
@@ -133,7 +134,7 @@ class BaseTool(metaclass=Meta):
         if arg < low_bound or arg > up_bound:
             raise InputParameterOutOfBoundary(arg)
 
-    @try_more_times(max_attempts=10, timeout=30, wait_period=1, retry_exception=ValueError)
+    @try_more_times(max_attempts=10, timeout=30, wait_period=1, stop_exception=AutoprogramError)
     async def load_tool(self, raw_path):
         await self.vgpc.load_tool(raw_path)
 
@@ -234,15 +235,15 @@ class BaseTool(metaclass=Meta):
         """
         Wrap the methods necessary to create the tool
         """
-        # self.set_parameters()
-        # await self.write_parameters()
+        self.set_parameters()
+        await self.write_parameters()
         self.set_wheels()
-        # await self.load_wheels()
+        await self.load_wheels()
         self.params_list = [] # needed by set_wheel_segments to have an empty list to append to
-        # self.set_wheel_segments()
-        # await self.write_parameters()
-        # self.set_isoeasy()
-        # await self.load_isoeasy()
+        self.set_wheel_segments()
+        await self.write_parameters()
+        self.set_isoeasy()
+        await self.load_isoeasy()
         self.set_datasheet()
         self.write_datasheet()
         # Create wheelpacks png shortcuts

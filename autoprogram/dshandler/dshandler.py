@@ -24,6 +24,7 @@ class DataSheet:
     def add_text_arguments(self, ds_text_args):
         for text_arg in ds_text_args:
             self.document.add_paragraph(text_arg, style='List Bullet')
+        _logger.info("Text added!!!")
 
     def add_wheelpacks_table(self, whp_n_posn_list):
         """
@@ -40,6 +41,7 @@ class DataSheet:
             row_cells = table.add_row().cells
             row_cells[0].text = str(posn)
             row_cells[1].text = str(whp)
+        _logger.info("Wheelpacks table created!!!")
 
     def add_pictures(self, ds_img_paths, width, heigth):
         table = self.document.add_table(rows=1, cols=2)
@@ -48,3 +50,4 @@ class DataSheet:
             paragraph = row_cells[i].paragraphs[0]
             run = paragraph.add_run()
             run.add_picture(str(ds_img_path), width=Mm(width), height=Mm(heigth))
+        _logger.info("Pictures inserted!!!")

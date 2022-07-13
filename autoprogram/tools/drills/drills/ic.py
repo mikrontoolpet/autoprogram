@@ -311,6 +311,7 @@ class Tool(BaseTool):
         rn_2_rake_shift = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_rake_shift")
         rn2_dl_start = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_dl_start")
         rn2_infeed_z = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_z")
+        rn2_infeed_y = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_y")
 
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Rake Shift", rn_2_rake_shift)
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL Start", rn2_dl_start)
@@ -477,4 +478,19 @@ class Tool(BaseTool):
         """
         Write additional information on datasheet
         """
-        pass
+        # Text
+        if (self.fl_len/self.diam - 3) <= 6:
+            support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_6xd")
+        else:
+            support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_10xd")
+        support_len = round(support_len)
+        support_len_text = "Support length: " + str(support_len) + " mm"
+        coolant_text = "Attention to the coolant pipes position!!!"
+
+        self.ds_text_args.append(support_len_text)
+        self.ds_text_args.append(coolant_text)
+
+        # Images
+        support_len_img_name = str(support_len) + "mm"
+
+        self.ds_img_names.append(support_len_img_name)

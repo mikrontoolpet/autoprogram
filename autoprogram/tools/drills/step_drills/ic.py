@@ -110,7 +110,7 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate", g1_feedrate)
 
         # Flute 101 (G2)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", 0.018*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", 0.03*self.diam)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL Start", front_dl_start)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL End", -0.2*self.diam)
 
@@ -167,7 +167,6 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Depth Past Center Yp", -0.03*self.diam)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Straight Gash/Profile 2D/sR", 0.0649*self.diam)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 101/Straight Gash/Profile 2D/sL", 0.0786*self.diam)
-
         # Feeds and speeds
         tn3_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN3_speed")
         tn3_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN3_feedrate_in")
@@ -182,7 +181,6 @@ class Tool(BaseTool):
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Web Thickness", tn1_web_thck)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Depth Past Center Yp", -0.2*self.diam)
-
         # Feeds and speeds
         tn1_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_speed")
         tn1_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_feedrate_in")
@@ -227,11 +225,9 @@ class Tool(BaseTool):
 
         # Step 0 Diameter
         # Step 0 OD Clearance
-        f12_dl_end = tn1_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "F12_dl_end")
         # OD Clearance 1 (F1)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.072*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/dL End", f12_dl_end)
-
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.06*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/dL End", -0.04*self.diam)
         # Feeds and speeds
         f1_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
         f1_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F1_feedrate")
@@ -243,8 +239,7 @@ class Tool(BaseTool):
         f2_marg_width = self.configuration_wb.trend("function_data", "diameter", self.diam, "F2_margin_width")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Margin Width", f2_marg_width)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/dL End", f12_dl_end)
-
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/dL End", -0.04*self.diam)
         # Feeds and speeds
         f2_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
         f2_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F2_feedrate")
@@ -254,19 +249,17 @@ class Tool(BaseTool):
 
         # Step 1
         # Step 1 Gash
-        rp_index = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_index")
         rp_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_web_thickness")
         rp_yp = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_yp")
         rp_rot_c = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_rotation_c")
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Index", rp_index)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Web Thickness", rp_web_thck)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Depth Past Center Yp", rp_yp)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Rotation C", rp_rot_c)
 
         # Step 1 Step Reliefs
         gr_radial_relief = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_radial_relief_angle")
-        gr_axial_relief = 13 if self.diam < 1.5 else 10
+        gr_axial_relief = 13 if self.diam < 3 else 10
         gr_rot_c = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_rotation_c")
         gr_depth = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_depth")
 
