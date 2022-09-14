@@ -25,7 +25,7 @@ class Tool(BaseTool):
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6)
 
-    def set_parameters(self):
+    async def set_parameters(self):
         # Set parameters
         point_ang = 143
         step_ang = 45
@@ -225,9 +225,10 @@ class Tool(BaseTool):
 
         # Step 0 Diameter
         # Step 0 OD Clearance
+        f12_dl_end = self.configuration_wb.trend("function_data", "diameter", self.diam, "F12_dl_end")
         # OD Clearance 1 (F1)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.06*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/dL End", -0.04*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.076*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/dL End", f12_dl_end)
         # Feeds and speeds
         f1_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
         f1_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F1_feedrate")
@@ -239,7 +240,7 @@ class Tool(BaseTool):
         f2_marg_width = self.configuration_wb.trend("function_data", "diameter", self.diam, "F2_margin_width")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Margin Width", f2_marg_width)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/dL End", -0.04*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/dL End", f12_dl_end)
         # Feeds and speeds
         f2_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
         f2_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F2_feedrate")
@@ -394,8 +395,7 @@ class Tool(BaseTool):
         """
         Set isoeasy
         """
-        pass
-        # self.isoeasy_name = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_name")
+        self.isoeasy_name = self.configuration_wb.lookup("isoeasy", "diameter", self.diam, "isoeasy_name")
 
     def set_datasheet(self):
         """

@@ -74,7 +74,7 @@ class BaseTool(metaclass=Meta):
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
         self.params_list = []
-        self.whp_n_posn_list = []
+        self.whp_df = pd.DataFrame(columns=["whp_name"], index=range(1, 7))
         self.isoeasy_name = None
         self.ds_text_args = []
         self.ds_img_names = []
@@ -134,7 +134,7 @@ class BaseTool(metaclass=Meta):
         if arg < low_bound or arg > up_bound:
             raise InputParameterOutOfBoundary(arg)
 
-    @try_more_times(max_attempts=10, timeout=30, wait_period=1, stop_exception=AutoprogramError)
+    @try_more_times(max_attempts=10, timeout=30, wait_period=1, retry_exception=FileNotFoundError)
     async def load_tool(self, raw_path):
         await self.vgpc.load_tool(raw_path)
 
@@ -155,7 +155,7 @@ class BaseTool(metaclass=Meta):
             await asyncio.gather(*[self.vgpc.write(row[1].nodeid, row[1].raw_val) for row in params_df_chunk.iterrows()]) # row[1] because row[0] is the index
 
     async def get(self, nodeid):
-        await self.vgpc.read(nodeid)
+        return await self.vgpc.read(nodeid)
 
     def full_pathlib_path(self, parent_dir, file_name, suffix):
         """
@@ -177,23 +177,7 @@ class BaseTool(metaclass=Meta):
         """
         Store wheelpack name and its position in a list
         """
-        self.whp_n_posn_list.append([whp_name, whp_posn])
-
-    async def load_wheels(self):
-        """
-        Load synchronously wheelpacks in the program
-        """
-        whp_n_posn_df = pd.DataFrame(self.whp_n_posn_list, columns=['whp_name', 'whp_posn'])
-        for row in whp_n_posn_df.iterrows():
-            await self.load_wheel(row[1].whp_name, row[1].whp_posn)
-
-    async def load_isoeasy(self):
-        """
-        Load specified isoeasy program
-        """
-        if self.isoeasy_name is not None:
-            str_full_isoeasy_path = str(self.full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
-            await self.vgpc.load_isoeasy(str_full_isoeasy_path)
+        self.whp_df.loc[whp_posn] = whp_name
 
     def create_shortcut(self, source_raw_path, shortcut_raw_path):
         source_path = str(source_raw_path)
@@ -203,6 +187,7 @@ class BaseTool(metaclass=Meta):
         shortcut.TargetPath = source_path
         shortcut.IconLocation = source_path
         shortcut.Save()
+        _logger.info("Wheelpack PNG shortcut created!!!")
 
     def create_res_shortcut_from_file_name(self, parent_dir, file_name, file_suffix):
         pthlb_source_full_path = self.full_pathlib_path(parent_dir, file_name, file_suffix)
@@ -211,6 +196,26 @@ class BaseTool(metaclass=Meta):
 
     def create_whp_png_shortcut(self, whp_name):
         self.create_res_shortcut_from_file_name(Config.STD_PNG_DIR, whp_name, Config.PNG_SUFFIX)
+
+    async def load_wheels(self):
+        """
+        Load synchronously wheelpacks in the program
+        """
+        for row in self.whp_df.iterrows():
+            whp_name = row[1].whp_name
+            whp_posn = row[0] # row index
+            # if the position is not empty, the wheelpack is loaded in the program and a shortcut is created
+            if whp_name.upper() != "EMPTY":
+                await self.load_wheel(whp_name, whp_posn)
+                self.create_whp_png_shortcut(whp_name)
+
+    async def load_isoeasy(self):
+        """
+        Load specified isoeasy program
+        """
+        if self.isoeasy_name is not None:
+            str_full_isoeasy_path = str(self.full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
+            await self.vgpc.load_isoeasy(str_full_isoeasy_path)
 
     def write_datasheet(self):
         """
@@ -229,13 +234,13 @@ class BaseTool(metaclass=Meta):
                 ds_img_paths = [self.full_pathlib_path(self.images_dir, img_name, Config.PNG_SUFFIX) for img_name in self.ds_img_names]
                 ds.add_pictures(ds_img_paths, 80, 80)
             # Wheelpacks position and name
-            ds.add_wheelpacks_table(self.whp_n_posn_list)
+            ds.add_wheelpacks_table(self.whp_df)
 
     async def create(self):
         """
         Wrap the methods necessary to create the tool
         """
-        self.set_parameters()
+        await self.set_parameters()
         await self.write_parameters()
         self.set_wheels()
         await self.load_wheels()
@@ -246,6 +251,3 @@ class BaseTool(metaclass=Meta):
         await self.load_isoeasy()
         self.set_datasheet()
         self.write_datasheet()
-        # Create wheelpacks png shortcuts
-        for whp, posn in self.whp_n_posn_list:
-            self.create_whp_png_shortcut(whp)

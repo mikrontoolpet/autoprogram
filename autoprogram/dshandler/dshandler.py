@@ -26,21 +26,20 @@ class DataSheet:
             self.document.add_paragraph(text_arg, style='List Bullet')
         _logger.info("Text added!!!")
 
-    def add_wheelpacks_table(self, whp_n_posn_list):
+    def add_wheelpacks_table(self, whp_df):
         """
-        whp_n_posn_list must be in the format:
-        [[whp_name_1, posn_1]
-         [whp_name_2, posn_2]
-        ...]
+        whp_df is the dataframe containing wheelpacks names and their positions
         """
         table = self.document.add_table(rows=1, cols=2)
         hdr_cells = table.rows[0].cells
         hdr_cells[0].text = 'Position'
         hdr_cells[1].text = 'Wheelpack Name'
-        for whp, posn in whp_n_posn_list:
+        for row in whp_df.iterrows():
+            whp_name = row[1].whp_name
+            whp_posn = row[0]
             row_cells = table.add_row().cells
-            row_cells[0].text = str(posn)
-            row_cells[1].text = str(whp)
+            row_cells[0].text = str(whp_posn)
+            row_cells[1].text = str(whp_name)
         _logger.info("Wheelpacks table created!!!")
 
     def add_pictures(self, ds_img_paths, width, heigth):

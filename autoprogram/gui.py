@@ -272,7 +272,7 @@ class CreatePage(tk.Frame):
             messagebox.showerror("Autoprogram Error", e)
             _logger.error(e)
 
-    @try_more_times(max_attempts=5, timeout=800, wait_period=1, stop_exception=AutoprogramError)
+    @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=Exception)
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class

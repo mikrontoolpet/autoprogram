@@ -353,4 +353,4 @@ class VgpClient:
         elif err_id == 5:
             raise ValueError(f"The value at node {args[0]} hasn't any type")
         elif err_id == 6:
-            raise ValueError(f"No such a file: {args[0]}")
+            raise FileNotFoundError(f"No such a file: {args[0]}")

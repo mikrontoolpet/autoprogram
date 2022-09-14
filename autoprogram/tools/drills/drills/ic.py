@@ -22,9 +22,9 @@ class Tool(BaseTool):
 
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6)
-        self.check_boundary(self.fl_len, 7*self.diam, 17.999*self.diam)
+        self.check_boundary(self.fl_len, 6*self.diam, 17.999*self.diam)
 
-    def set_parameters(self):
+    async def set_parameters(self):
         # Set parameters
         self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
@@ -310,12 +310,13 @@ class Tool(BaseTool):
         # Flute 301 (RN2)
         rn_2_rake_shift = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_rake_shift")
         rn2_dl_start = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_dl_start")
-        rn2_infeed_z = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_z")
         rn2_infeed_y = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_y")
+        rn2_infeed_z = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_z")
 
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Rake Shift", rn_2_rake_shift)
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL Start", rn2_dl_start)
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL End", -0.8*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Y", rn2_infeed_y)
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Z", rn2_infeed_z)
 
         # Feeds and speeds
@@ -492,5 +493,7 @@ class Tool(BaseTool):
 
         # Images
         support_len_img_name = str(support_len) + "mm"
+        coolant_img_name = "coolant"
 
         self.ds_img_names.append(support_len_img_name)
+        self.ds_img_names.append(coolant_img_name)

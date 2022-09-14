@@ -25,7 +25,7 @@ class Tool(BaseTool):
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1.4, 6.4)
 
-    def set_parameters(self):
+    async def set_parameters(self):
 
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
 
