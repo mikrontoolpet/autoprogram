@@ -13,6 +13,10 @@ class WrongCreateFileName(AutoprogramError):
     """Wrong create file name"""
     pass
 
+class WrongCommonFileName(AutoprogramError):
+    """Wrong common file name"""
+    pass
+
 class WrongConfigurationFileName(AutoprogramError):
     """Wrong create file name"""
     pass

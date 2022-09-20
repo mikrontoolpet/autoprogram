@@ -19,6 +19,7 @@ import logging
 
 from autoprogram.errors import *
 from autoprogram.config import Config
+from autoprogram.wbhandler import WorkBook
 from autoprogram.vgpro import VgpWrapper
 from autoprogram.common import try_more_times
 try:
@@ -80,7 +81,7 @@ class InitializingPage(tk.Frame):
 
     def run(self):
         InitializingPage.family_dict = {}
-        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool, tools.drills.step_drills.ic.Tool, tools.drills.step_drills.atc.Tool): # new tool classes must be added here
+        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ptc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool, tools.drills.step_drills.ic.Tool, tools.drills.step_drills.atc.Tool): # new tool classes must be added here
             InitializingPage.family_dict[T.family_address] = T
         self.init_label.config(text="Tool families initialized!")
 
@@ -279,8 +280,16 @@ class CreatePage(tk.Frame):
                 await tool.create()
             
     async def create_many_tools(self):
-        df = SelectFamilyPage.ToolClass.create_wb
-        for idx, row in df.iterrows():
+        # Read create file
+        try:
+            create_wb_path = SelectFamilyPage.ToolClass.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
+            create_dict = WorkBook(create_wb_path).wb
+            create_dict_values = [*create_dict.values()]
+            create_df = create_dict_values[0]
+        except ValueError:
+            raise WrongCreateFileName
+
+        for idx, row in create_df.iterrows():
             name = row.loc["name"]
             params_list = row.filter(like="params").tolist()
             await self.create_one_tool(name, params_list)
@@ -290,4 +299,3 @@ class CreatePage(tk.Frame):
 
     def back_button_method(self):
         self.controller.show_frame(InsertArgumentsPage)
-

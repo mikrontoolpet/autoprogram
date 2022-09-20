@@ -3,14 +3,13 @@ import asyncio
 import numpy as np
 import pandas as pd
 from pathlib import Path
-import win32com.client
 import logging
 
 from autoprogram.errors import *
 from autoprogram.wbhandler import WorkBook
 from autoprogram.dshandler import DataSheet
 from autoprogram.config import Config
-from autoprogram.common import try_more_times
+from autoprogram.common import try_more_times, full_pathlib_path, create_res_shortcut_from_file_name, is_nan
 
 
 logging.basicConfig(level=logging.INFO)
@@ -49,22 +48,10 @@ class Meta(type):
             cls.worksheets_dir = cls.family_dir.joinpath(Config.WORKSHEETS_DIR)
             cls.isoeasy_dir = cls.family_dir.joinpath(Config.ISOEASY_DIR)
             cls.images_dir = cls.family_dir.joinpath(Config.IMAGES_DIR)
-            # Read common worksheet
-            cls.common_wb = WorkBook(Config.COMMON_WB_PATH)
-            # Read create file
-            try:
-                create_wb_path = cls.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
-                create_dict = WorkBook(create_wb_path).wb
-                create_dict_values = [*create_dict.values()]
-                cls.create_wb = create_dict_values[0]
-            except ValueError:
-                raise WrongCreateFileName
-            # Read configuration file
-            try:
-                configuration_wb_path = cls.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
-                cls.configuration_wb = WorkBook(configuration_wb_path)
-            except ValueError:
-                raise WrongConfigurationFileName
+            # Set configuration file path
+            cls.create_wb_path = cls.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
+            # Set configuration file path
+            cls.configuration_wb_path = cls.worksheets_dir.joinpath(Config.CONFIG_FILE_NAME)
         return cls
 
 
@@ -78,6 +65,18 @@ class BaseTool(metaclass=Meta):
         self.isoeasy_name = None
         self.ds_text_args = []
         self.ds_img_names = []
+
+        # Read common file
+        try:
+            self.common_wb = WorkBook(Config.COMMON_WB_PATH)
+        except ValueError:
+            raise WrongCommonFileName
+
+        # Read configuration file
+        try:
+            self.configuration_wb = WorkBook(self.configuration_wb_path)
+        except ValueError:
+            raise WrongConfigurationFileName
 
     async def __aenter__(self):
         """
@@ -157,19 +156,12 @@ class BaseTool(metaclass=Meta):
     async def get(self, nodeid):
         return await self.vgpc.read(nodeid)
 
-    def full_pathlib_path(self, parent_dir, file_name, suffix):
-        """
-        This method returns the full pathlib path, given the file name,
-        its parent directory and its suffix
-        """
-        return Path(parent_dir).joinpath(file_name + suffix)
-
     async def load_wheel(self, whp_name, whp_posn):
         """
         This method calls the opc-ua method to load a wheelpack in the selected
         position
         """
-        pthlb_whp_path = self.full_pathlib_path(Config.STD_WHP_DIR, whp_name, Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
+        pthlb_whp_path = full_pathlib_path(Config.STD_WHP_DIR, whp_name, Config.CREATE_WHP_SUFFIX + Config.WHP_SUFFIX)
         str_whp_path = str(pthlb_whp_path)
         await self.vgpc.load_wheel(str_whp_path, whp_posn)
 
@@ -179,23 +171,8 @@ class BaseTool(metaclass=Meta):
         """
         self.whp_df.loc[whp_posn] = whp_name
 
-    def create_shortcut(self, source_raw_path, shortcut_raw_path):
-        source_path = str(source_raw_path)
-        shortcut_path = str(shortcut_raw_path)
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortcut(shortcut_path)
-        shortcut.TargetPath = source_path
-        shortcut.IconLocation = source_path
-        shortcut.Save()
-        _logger.info("Wheelpack PNG shortcut created!!!")
-
-    def create_res_shortcut_from_file_name(self, parent_dir, file_name, file_suffix):
-        pthlb_source_full_path = self.full_pathlib_path(parent_dir, file_name, file_suffix)
-        pthlb_shortcut_path = Path(self.res_prog_dir).joinpath(file_name + ".lnk")
-        self.create_shortcut(pthlb_source_full_path, pthlb_shortcut_path)
-
     def create_whp_png_shortcut(self, whp_name):
-        self.create_res_shortcut_from_file_name(Config.STD_PNG_DIR, whp_name, Config.PNG_SUFFIX)
+        create_res_shortcut_from_file_name(Config.STD_PNG_DIR, whp_name, Config.PNG_SUFFIX, self.res_prog_dir)
 
     async def load_wheels(self):
         """
@@ -205,7 +182,9 @@ class BaseTool(metaclass=Meta):
             whp_name = row[1].whp_name
             whp_posn = row[0] # row index
             # if the position is not empty, the wheelpack is loaded in the program and a shortcut is created
-            if whp_name.upper() != "EMPTY":
+            if is_nan(whp_name):
+                row[1].whp_name = "Empty"
+            else:
                 await self.load_wheel(whp_name, whp_posn)
                 self.create_whp_png_shortcut(whp_name)
 
@@ -214,7 +193,7 @@ class BaseTool(metaclass=Meta):
         Load specified isoeasy program
         """
         if self.isoeasy_name is not None:
-            str_full_isoeasy_path = str(self.full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
+            str_full_isoeasy_path = str(full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
             await self.vgpc.load_isoeasy(str_full_isoeasy_path)
 
     def write_datasheet(self):
@@ -231,7 +210,7 @@ class BaseTool(metaclass=Meta):
             # Datasheet images
             # Convert names to full paths
             if self.ds_img_names is not None:
-                ds_img_paths = [self.full_pathlib_path(self.images_dir, img_name, Config.PNG_SUFFIX) for img_name in self.ds_img_names]
+                ds_img_paths = [full_pathlib_path(self.images_dir, img_name, Config.PNG_SUFFIX) for img_name in self.ds_img_names]
                 ds.add_pictures(ds_img_paths, 80, 80)
             # Wheelpacks position and name
             ds.add_wheelpacks_table(self.whp_df)

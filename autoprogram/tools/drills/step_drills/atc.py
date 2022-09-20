@@ -404,7 +404,6 @@ class Tool(BaseTool):
         whp_name = self.configuration_wb.lookup("wheelpacks_1_5", "diameter", self.diam, "wheelpack_2")
         self.set_wheel(whp_name, 2)
         # Skip wheelpack 3
-        self.set_wheel("Empty", 3)
         # Load wheelpack 4
         whp_name = self.configuration_wb.lookup("wheelpacks_1_5", "diameter", self.diam, "wheelpack_4")
         self.set_wheel(whp_name, 4)
@@ -423,8 +422,8 @@ class Tool(BaseTool):
         # S_G2
         # if Ø >= 3 another roughing flute is needed
         if self.diam >= 3:
-            op_wh_seg = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "S_G2_wheel")
-            self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute 1 (Output)/Wheel", op_wh_seg)
+            op_wh_seg = self.configuration_wb.lookup("roughing_flute", "diameter", self.diam, "S_G2_wheel")
+            self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute 101/Wheel", op_wh_seg)
 
         # F1 - F2
         op_wh_seg = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_wheel")
