@@ -326,7 +326,8 @@ class Tool(BaseTool):
 
         # # Step 1
         delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
-        point_len = trig_point_len - delta_dl
+        point_len = trig_point_len + delta_dl
+        
         # # Step 1 Gash (RD)
         rd_index = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_index")
         rd_d = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_d")
