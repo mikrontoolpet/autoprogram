@@ -69,11 +69,12 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 2/Cutting Security Distance", d700)
 
        # Set 1
-        # Profile
+        # Common Data
         point_ang = 140
         point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
         ta0 = -0.143
-        sp1 = 4.55*self.diam
+        sp1_coeff = self.configuration_wb.lookup("function_data", "diameter", self.diam, "COMMON_DATA_sp1_coefficent")
+        sp1 = sp1_coeff*self.diam
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/D0", self.diam)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/sP1", sp1)
@@ -88,7 +89,7 @@ class Tool(BaseTool):
         # Core diameter, rake angle and circular land width have a transition in values along the flute length
         g1_core_diam_perc_1 = 34
         g1_core_diam_perc_2 = 31
-        g1_circ_land_width = round(0.8*self.diam, 2)
+        g1_circ_land_width = round(0.791*self.diam, 2)
         g1_exit_rad = round(0.25*self.diam, 2)
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Circular Land Width", g1_circ_land_width)
@@ -114,7 +115,7 @@ class Tool(BaseTool):
         s_g1_core_stk_rmv_perc = 2*s_g1_core_rad_stk_rmv_perc # total stock removal percentage
         s_g1_core_diam_perc_1 = round(g1_core_diam_perc_1 + s_g1_core_stk_rmv_perc, 1)
         s_g1_core_diam_perc_2 = round(g1_core_diam_perc_2 + s_g1_core_stk_rmv_perc, 1)
-        s_g1_circ_land_width = round(0.816*self.diam, 2)
+        s_g1_circ_land_width = round(0.808*self.diam, 2)
         s_g1_dl_end = round(0.075*self.diam, 2)
         s_g1_exit_rad = round(0.5*self.diam, 2)
         s_g1_inf_down_y = round(0.04*self.diam + 0.06, 2)
@@ -181,7 +182,7 @@ class Tool(BaseTool):
         # Gash (TN1)
         # Web thickness
         tn1_index = self.configuration_wb.lookup("function_data", "diameter", self.diam, "TN1_index")
-        tn1_web_thick = round(0.1264*self.diam - 0.0024, 2)
+        tn1_web_thick = 0.1264*self.diam - 0.0024
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash Rotation", tn1_index)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Web Thickness", tn1_web_thick)
@@ -263,7 +264,8 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Feedrate", f1_feedrate)
 
         # OD Clearance 101 (F2)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Margin Width", 0.275*self.diam)
+        f2_marg_width = self.configuration_wb.lookup("function_data", "diameter", self.diam, "F2_margin_width")
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Margin Width", f2_marg_width)
 
         # Feeds and speeds
         f2_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F2_feedrate")
@@ -272,7 +274,9 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Feedrate", f2_feedrate)
 
         # OD Clearance 201 (FR)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 201/Margin Width", 0.65*self.diam)
+        fr_marg_width = round(0.65*self.diam, 2)
+
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 201/Margin Width", fr_marg_width)
 
         # Feeds and speeds
         fr_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "FR_feedrate")
@@ -325,7 +329,10 @@ class Tool(BaseTool):
 
         # Relief 2 (SM)
         sm_exit_dist = round(0.14*self.diam + 0.16, 2)
+        sm_depth = 0.005*self.diam - 0.002
+
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 2/Relief 1/Cam 1/Exit distance", sm_exit_dist)
+        self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 2/Relief 1/Cam 1/Depth", sm_depth)
 
         # Feeds and speeds
         sm_speed = self.configuration_wb.lookup("SM", "diameter", self.diam, "SM_speed")
