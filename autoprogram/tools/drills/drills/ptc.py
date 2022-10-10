@@ -81,8 +81,9 @@ class Tool(BaseTool):
 
         # Flute 1
         front_dl_start = round(0.0374*self.diam + 0.1126, 2)
+        prog_fl_len = round(self.fl_len - 0.25*self.diam, 2)
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length", self.fl_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length", prog_fl_len)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Lead", lead)
 
         # Flute 1 (G1)
@@ -162,7 +163,7 @@ class Tool(BaseTool):
         g2_exit_rad = round(0.25*self.diam, 2)
         g2_dl_end = round(-0.25*self.diam, 2)
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", self.fl_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", prog_fl_len)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", lead)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Circular Land Width", g2_circ_land_width)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL Start", front_dl_start)
@@ -249,12 +250,7 @@ class Tool(BaseTool):
         # Step 0 Diameter
         # Step 0 OD Clearance
         # OD Clearance 1 (F1)
-        f1_bk_clear_perc = self.configuration_wb.lookup("function_data", "diameter", self.diam, "F1_back_clearance")
-        f1_drop_ang = self.configuration_wb.lookup("function_data", "diameter", self.diam, "F1_drop_angle")
-
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.075*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Back Clearance", f1_bk_clear_perc)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Drop Angle", f1_drop_ang)
 
         # Feeds and speeds
         f12r_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12R_speed")
@@ -274,9 +270,11 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Feedrate", f2_feedrate)
 
         # OD Clearance 201 (FR)
-        fr_marg_width = round(0.65*self.diam, 2)
+        fr_marg_width = round(0.62*self.diam, 2)
+        fr_bk_clear_perc = self.configuration_wb.lookup("function_data", "diameter", self.diam, "FR_back_clearance")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 201/Margin Width", fr_marg_width)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 201/Back Clearance", fr_bk_clear_perc)
 
         # Feeds and speeds
         fr_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "FR_feedrate")
