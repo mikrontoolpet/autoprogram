@@ -283,9 +283,8 @@ class CreatePage(tk.Frame):
         # Read create file
         try:
             create_wb_path = SelectFamilyPage.ToolClass.worksheets_dir.joinpath(Config.CREATE_FILE_NAME)
-            create_dict = WorkBook(create_wb_path).wb
-            create_dict_values = [*create_dict.values()]
-            create_df = create_dict_values[0]
+            create_wb = WorkBook(create_wb_path)
+            create_df = create_wb.get_first_sh_df()
         except ValueError:
             raise WrongCreateFileName
 

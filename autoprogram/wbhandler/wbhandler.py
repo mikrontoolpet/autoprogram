@@ -15,7 +15,7 @@ class WorkBook:
         """
         _logger.info(f"Reading the excel file {path}")
         try:
-            self.wb = pd.read_excel(path, sheet_name=None, keep_default_na=False, na_filter=False)
+            self.sh_dict = pd.read_excel(path, sheet_name=None, keep_default_na=False, na_filter=False)
         except FileNotFoundError:
             self.error_list(3)
         _logger.info("Excel file read!")
@@ -25,7 +25,7 @@ class WorkBook:
         lookup method
         """
         try:
-            sh = self.wb[sheet_name]
+            sh = self.sh_dict[sheet_name]
             sh[arg_col] = sh[arg_col].astype("float64") # format argument as float
             sh[res_col] = sh[res_col].astype("string") # format result as string
             filt = (sh[arg_col] <= arg_val) # Select all row idx whose argument is less or equal to the input
@@ -50,10 +50,10 @@ class WorkBook:
 
     def trend(self, sheet_name, arg_col, arg_val, res_col):
         """
-        trend method
+        Trend method
         """
         try:
-            sh = self.wb[sheet_name]
+            sh = self.sh_dict[sheet_name]
             arg_ser = sh[arg_col].astype("float64")
             res_ser = sh[res_col].astype("float64")
             f = interpolate.interp1d(arg_ser, res_ser)
@@ -63,6 +63,13 @@ class WorkBook:
             self.error_list(1)
         except ValueError:
             self.error_list(2)
+
+    def get_first_sh_df(self):
+        """
+        Returns the first sheet of the workbook as DataFrame
+        """
+        first_sh_key = list(self.sh_dict.keys())[0]
+        return self.sh_dict[first_sh_key]
 
     def error_list(self, err_id, *args, **kwargs):
         """

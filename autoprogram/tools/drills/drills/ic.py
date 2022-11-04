@@ -310,14 +310,12 @@ class Tool(BaseTool):
         # Flute 301 (RN2)
         rn_2_rake_shift = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_rake_shift")
         rn2_dl_start = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_dl_start")
-        rn2_infeed_y = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_y")
-        rn2_infeed_z = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_z")
+        rn2_inf_start_z = self.configuration_wb.trend("function_data", "diameter", self.diam, "RN2_infeed_start_z")
 
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Rake Shift", rn_2_rake_shift)
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL Start", rn2_dl_start)
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/dL End", -0.8*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Y", rn2_infeed_y)
-        self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Z", rn2_infeed_z)
+        self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Infeed Motion (Start)/Z", rn2_inf_start_z)
 
         # Feeds and speeds
         self.set("ns=2;s=tool/Tool/Set 2/Common Data/Flutes/Flute 1/Flute 301/Cutting Speed", rn12_speed)
@@ -480,20 +478,29 @@ class Tool(BaseTool):
         Write additional information on datasheet
         """
         # Text
+        rl = self.diam
+
         if (self.fl_len/self.diam - 3) <= 6:
-            support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_6xd")
+            sm = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "sm_6xd")
         else:
-            support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_10xd")
-        support_len = round(support_len)
-        support_len_text = "Support length: " + str(support_len) + " mm"
+            sm = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "sm_10xd")
+
+        vf = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "vf")
+
+        rl_text = "RL: " + str(rl) + " mm"
+        sm_text = "SM: " + str(sm) + " mm"
+        vf_text = "VF: " + str(vf) + " mm"
+
         coolant_text = "Attention to the coolant pipes position!!!"
 
-        self.ds_text_args.append(support_len_text)
+        self.ds_text_args.append(rl_text)
+        self.ds_text_args.append(sm_text)
+        self.ds_text_args.append(vf_text)
         self.ds_text_args.append(coolant_text)
 
         # Images
-        support_len_img_name = str(support_len) + "mm"
-        coolant_img_name = "coolant"
+        steadyrest_img_name = "steadyrest_setup"
+        coolant_img_name = "coolant_setup"
 
-        self.ds_img_names.append(support_len_img_name)
+        self.ds_img_names.append(steadyrest_img_name)
         self.ds_img_names.append(coolant_img_name)

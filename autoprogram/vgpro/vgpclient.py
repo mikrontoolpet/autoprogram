@@ -200,6 +200,14 @@ class VgpClient:
         await parent_node.call_method("DeleteAllFlanges")
 
     @wait_till_ready
+    async def calculate_cycle_time(self):
+        """
+        Method that calculates cycle time
+        """
+        parent_node = self.client.get_node("ns=2;s=Commands/Simulation")
+        await parent_node.call_method("CalculateCycleTime")
+
+    @wait_till_ready
     async def load_wheel(self, raw_whp_path, whp_posn):
         """
         Method that loads the selected wheelpack in a specified position (BUGGED).

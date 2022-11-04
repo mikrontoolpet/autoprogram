@@ -146,11 +146,13 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Feedrate", s_g1_feedrate)
 
         # Flute 201 (ERF)
-        erf_dl_start = round(-self.step_len + 0.5*self.diam, 2)
-        erf_dl_end = round(-self.fl_len + 4.5*self.diam, 2)
+        erf_wheel_disp = 1 if self.diam < 1.5 else 2
+        erf_dl_start = round(-self.step_len + 0.5*self.diam, 2) # - 2.5*self.diam in the original document
+        erf_dl_end = round(-self.fl_len + self.step_len + 1.5*self.diam, 2) # - self.fl_len + 4.5*self.diam in the original document 
         erf_inf_down_y = round(0.5*self.diam, 2)
         erf_corr_y = round(-0.5*self.diam, 2)
 
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel Displacement", erf_wheel_disp)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/dL Start", erf_dl_start)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/dL End", erf_dl_end)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Infeed Down Y", erf_inf_down_y)
@@ -334,7 +336,7 @@ class Tool(BaseTool):
         rd_dd = self.diam
         rd_dz = -(self.step_len + point_len)
         rd_web_thckn = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_web_thickness")
-        rd_yp = round(0.018*self.diam, 2)
+        rd_yp = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_yp")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Index", rd_index)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/D", rd_d)
@@ -353,13 +355,17 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Feed along sweep+exit", rd_feedrate)
 
         # Step 1 Step Reliefs (GR)
+        gr_rad_rel = 0.7 if self.diam < 3 else 1
         gr_ax_rel = 10 if self.diam >= 1.5 else 13
         gr_dl_start = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_dl_start")
-        gr_depth = round(0.007*self.diam, 2)
+        gr_rot_c = 72 if self.diam < 3 else 80
+        gr_depth = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_depth")
         gr_infeed_dist = 0.07*self.diam + 0.18
 
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Radial Relief Angle", gr_rad_rel)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Axial Relief Angle", gr_ax_rel)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/dL Start", gr_dl_start)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Rotation C", gr_rot_c)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Depth", gr_depth)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Infeed Distance", gr_infeed_dist)
 
@@ -486,19 +492,13 @@ class Tool(BaseTool):
         Write additional information on datasheet
         """
         # Text
-        # if (self.fl_len/self.diam - 3) <= 6:
-        #     support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_6xd")
-        # else:
-        #     support_len = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "support_len_10xd")
-        # support_len = round(support_len)
-        # support_len_text = "Support length: " + str(support_len) + " mm"
         coolant_text = "Attention to the coolant pipes position!!!"
 
-        # self.ds_text_args.append(support_len_text)
         self.ds_text_args.append(coolant_text)
 
         # Images
         coolant_img_name = "coolant"
+        steadyrest_img_name = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "steadyrest_configuration")
 
-        # self.ds_img_names.append(support_len_img_name)
+        self.ds_img_names.append(steadyrest_img_name)
         self.ds_img_names.append(coolant_img_name)

@@ -17,6 +17,9 @@ _logger = logging.getLogger(__name__)
 
 
 MAX_ASYNC_REQUESTS = 1
+CYCLE_TIME_NODEID = "ns=2;s=ProgramMetadata/CycleTime"
+CYCLE_TIME_LOG_FILE_NAME = "cycle_time_log.xlsx"
+CYCLE_TIME_LOG_COLUMNS = ['name', 'simulation cycle time [s]']
 
 
 class Meta(type):
@@ -65,6 +68,7 @@ class BaseTool(metaclass=Meta):
         self.isoeasy_name = None
         self.ds_text_args = []
         self.ds_img_names = []
+        self.cycle_time = None
 
         # Read common file
         try:
@@ -84,6 +88,7 @@ class BaseTool(metaclass=Meta):
         """
         self.complete_name = self.name + "_" + self.__class__.machine
         self.res_prog_dir = Path(Config.RES_PROGS_DIR).joinpath(self.complete_name)
+        self.cycle_time_log_path = Path(Config.RES_PROGS_DIR).joinpath(CYCLE_TIME_LOG_FILE_NAME)
         try:
             self.res_prog_dir.mkdir(parents=True)
         except FileExistsError:
@@ -196,6 +201,14 @@ class BaseTool(metaclass=Meta):
             str_full_isoeasy_path = str(full_pathlib_path(self.isoeasy_dir, self.isoeasy_name, Config.ISOEASY_SUFFIX))
             await self.vgpc.load_isoeasy(str_full_isoeasy_path)
 
+    async def calculate_cycle_time(self):
+        """
+        Calculate cycle time and save it in an object variable
+        """
+        await self.vgpc.calculate_cycle_time()
+        cycle_time_temp = await self.get(CYCLE_TIME_NODEID) # get cycle time in seconds
+        self.cycle_time = round(cycle_time_temp)
+
     def write_datasheet(self):
         """
         This method must be used in set_datasheet method.
@@ -204,6 +217,10 @@ class BaseTool(metaclass=Meta):
         with DataSheet(self.datasheet_path) as ds:
             # Datasheet header
             ds.add_heading(self.complete_name + " Datasheet")
+            # Datasheet cycle time text
+            cycle_time_h = round(self.cycle_time/36, 3) # convert seconds in decimal hours
+            cycle_time_text = "Cycle time: " + str(cycle_time_h) + " H"
+            self.ds_text_args.append(cycle_time_text)
             # Datasheet custom text
             if self.ds_text_args is not None:
                 ds.add_text_arguments(self.ds_text_args)
@@ -214,6 +231,17 @@ class BaseTool(metaclass=Meta):
                 ds.add_pictures(ds_img_paths, 80, 80)
             # Wheelpacks position and name
             ds.add_wheelpacks_table(self.whp_df)
+
+    def write_cycle_time_log(self):
+        try:
+            cycle_time_log_wb = WorkBook(self.cycle_time_log_path)
+            cycle_time_log_df = cycle_time_log_wb.get_first_sh_df()
+        except ValueError:
+            cycle_time_log_df = pd.DataFrame(columns=CYCLE_TIME_LOG_COLUMNS)
+
+        df_concat = pd.DataFrame([[self.name, self.cycle_time]], columns=CYCLE_TIME_LOG_COLUMNS)
+        cycle_time_log_df = pd.concat([cycle_time_log_df, df_concat], ignore_index=True)
+        cycle_time_log_df.to_excel(self.cycle_time_log_path, index=False)
 
     async def create(self):
         """
@@ -228,5 +256,7 @@ class BaseTool(metaclass=Meta):
         await self.write_parameters()
         self.set_isoeasy()
         await self.load_isoeasy()
+        await self.calculate_cycle_time()
         self.set_datasheet()
         self.write_datasheet()
+        self.write_cycle_time_log()

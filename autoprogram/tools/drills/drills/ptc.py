@@ -74,7 +74,7 @@ class Tool(BaseTool):
         point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
         ta0 = -0.143
         sp1_coeff = self.configuration_wb.lookup("function_data", "diameter", self.diam, "COMMON_DATA_sp1_coefficent")
-        sp1 = sp1_coeff*self.diam
+        sp1 = round(sp1_coeff*self.diam, 2)
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/D0", self.diam)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Profile/sP1", sp1)
