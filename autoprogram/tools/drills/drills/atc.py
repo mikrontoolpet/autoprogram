@@ -412,3 +412,36 @@ class Tool(BaseTool):
 
         self.ds_img_names.append(support_len_img_name)
         self.ds_img_names.append(coolant_img_name)
+
+
+    def set_datasheet(self):
+        """
+        Write additional information on datasheet
+        """
+        # Text
+        rl = self.diam
+
+        if (self.fl_len/self.diam - 3) <= 6:
+            sm = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "sm_6xd")
+        else:
+            sm = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "sm_10xd")
+
+        vf = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "vf")
+
+        rl_text = "RL: " + str(rl) + " mm"
+        sm_text = "SM: " + str(sm) + " mm"
+        vf_text = "VF: " + str(vf) + " mm"
+
+        coolant_text = "Attention to the coolant pipes position!!!"
+
+        self.ds_text_args.append(rl_text)
+        self.ds_text_args.append(sm_text)
+        self.ds_text_args.append(vf_text)
+        self.ds_text_args.append(coolant_text)
+
+        # Images
+        steadyrest_img_name = "steadyrest_setup"
+        coolant_img_name = "coolant_setup"
+
+        self.ds_img_names.append(steadyrest_img_name)
+        self.ds_img_names.append(coolant_img_name)

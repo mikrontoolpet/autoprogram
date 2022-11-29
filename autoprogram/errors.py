@@ -1,5 +1,7 @@
 class AutoprogramError(Exception):
-    pass
+    def __init__(self, args, *kwargs):
+        for arg in args:
+            messagebox.showerror("Autoprogram Error", arg)
 
 class EmergencyStop(AutoprogramError):
     """Emergency stop error"""
@@ -27,6 +29,11 @@ class WbSheetOrColumnNameError(AutoprogramError):
 class InputParameterOutOfBoundary(AutoprogramError):
     def __init__(self, value):
         message = f"The value {value} is out of boundary"
+        super().__init__(message)
+
+class NoSuchAFile(AutoprogramError):
+    def __init__(self, filename):
+        message = f"No such a file: {filename}"
         super().__init__(message)
 
 class RConnectError(Exception):

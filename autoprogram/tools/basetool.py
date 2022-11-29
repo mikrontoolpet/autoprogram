@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
 
 
-MAX_ASYNC_REQUESTS = 1
+MAX_ASYNC_REQUESTS = 10
 CYCLE_TIME_NODEID = "ns=2;s=ProgramMetadata/CycleTime"
 CYCLE_TIME_LOG_FILE_NAME = "cycle_time_log.xlsx"
 CYCLE_TIME_LOG_COLUMNS = ['name', 'simulation cycle time [s]']
@@ -156,6 +156,8 @@ class BaseTool(metaclass=Meta):
         # Divide DataFrame in chunks in order to make not too many asynchronous request
         params_df_list = [params_df[i:i + MAX_ASYNC_REQUESTS] for i in range(0, params_df.shape[0], MAX_ASYNC_REQUESTS)]
         for params_df_chunk in params_df_list:
+            print(params_df_chunk)
+            input("PAUSE")
             await asyncio.gather(*[self.vgpc.write(row[1].nodeid, row[1].raw_val) for row in params_df_chunk.iterrows()]) # row[1] because row[0] is the index
 
     async def get(self, nodeid):
@@ -217,10 +219,10 @@ class BaseTool(metaclass=Meta):
         with DataSheet(self.datasheet_path) as ds:
             # Datasheet header
             ds.add_heading(self.complete_name + " Datasheet")
-            # Datasheet cycle time text
-            cycle_time_h = round(self.cycle_time/36, 3) # convert seconds in decimal hours
-            cycle_time_text = "Cycle time: " + str(cycle_time_h) + " H"
-            self.ds_text_args.append(cycle_time_text)
+            # # Datasheet cycle time text
+            # cycle_time_h = round(self.cycle_time/36, 3) # convert seconds in decimal hours
+            # cycle_time_text = "Cycle time: " + str(cycle_time_h) + " H"
+            # self.ds_text_args.append(cycle_time_text)
             # Datasheet custom text
             if self.ds_text_args is not None:
                 ds.add_text_arguments(self.ds_text_args)

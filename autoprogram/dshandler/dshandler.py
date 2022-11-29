@@ -50,3 +50,10 @@ class DataSheet:
             run = paragraph.add_run()
             run.add_picture(str(ds_img_path), width=Mm(width), height=Mm(heigth))
         _logger.info("Pictures inserted!!!")
+
+    def error_list(self, err_id, *args, **kwargs):
+        """
+        In case of error
+        """
+        if err_id == 0:
+            raise IndexError("No argument in the sheet.")
