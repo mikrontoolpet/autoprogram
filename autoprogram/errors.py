@@ -1,7 +1,8 @@
+from tkinter import messagebox
+
 class AutoprogramError(Exception):
     def __init__(self, args, *kwargs):
-        for arg in args:
-            messagebox.showerror("Autoprogram Error", arg)
+        messagebox.showerror("Autoprogram Error", args)
 
 class EmergencyStop(AutoprogramError):
     """Emergency stop error"""

@@ -15,8 +15,8 @@ ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 WHP_POSN_ARGS = ("VGP_Guid", "G_Type", "Rollomatic.Common.MetaLibrary.Flange", "G_Position")
 
 SUB_PERIOD = 100 # [ms], the variable ApplicationStateHandler.app_state is read and updated every <SUB_PERIOD> milliseconds (server communication cycle time)
-APP_STATE_CHECK_PERIOD = 0.15 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
-APP_STATE_INIT_WAIT_TIME = 0.2 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
+APP_STATE_CHECK_PERIOD = 0.2 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
+APP_STATE_INIT_WAIT_TIME = 1.2 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 # APP_STATE_CHECK_PERIOD_WHEEL = 0.5 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
 # APP_STATE_INIT_WAIT_TIME_WHEEL = 1 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 
@@ -70,7 +70,7 @@ def wait_till_ready(coro):
     state is ready
     """
     async def wrapper(*args, **kwargs):
-        _logger.info("Awaiting coroutine " + coro.__name__ +  "...")
+        _logger.info("Awaiting coroutine " + coro.__name__ + "...")
         res = await coro(*args, **kwargs)
         await asyncio.sleep(APP_STATE_INIT_WAIT_TIME)
         while ApplicationStateHandler.app_state != ApplicationState.ready:
@@ -228,6 +228,8 @@ class VgpClient:
         ua_whp_posn_shift = ua.Variant(whp_posn_shift, ua.VariantType.Int32)
         parent_node = self.client.get_node("ns=2;s=Commands/FileManagement")
         await parent_node.call_method("LoadWheels", ua_str_whp_path, ua_whp_posn_shift)
+        _logger.info(f"Wheelpack {str_whp_path} loaded in position {whp_posn}")
+
 
     @wait_till_ready
     async def load_isoeasy(self, raw_path):

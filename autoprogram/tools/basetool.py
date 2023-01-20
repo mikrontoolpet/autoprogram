@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
 
 
-MAX_ASYNC_REQUESTS = 10
+MAX_ASYNC_REQUESTS = 1
 CYCLE_TIME_NODEID = "ns=2;s=ProgramMetadata/CycleTime"
 CYCLE_TIME_LOG_FILE_NAME = "cycle_time_log.xlsx"
 CYCLE_TIME_LOG_COLUMNS = ['name', 'simulation cycle time [s]']
@@ -64,7 +64,7 @@ class BaseTool(metaclass=Meta):
         self.vgpc = vgp_client # active VgpClient instance (whose __aenter__ method has been run)
         self.name = name
         self.params_list = []
-        self.whp_df = pd.DataFrame(columns=["whp_name"], index=range(1, 7))
+        self.whp_df = pd.DataFrame(columns=["whp_name", "mode"], index=range(1, 7))
         self.isoeasy_name = None
         self.ds_text_args = []
         self.ds_img_names = []
@@ -107,7 +107,7 @@ class BaseTool(metaclass=Meta):
             raise LoadToolFailed
 
         await self.vgpc.save_tool(self.res_prog_path)
-        await self.vgpc.delete_all_flanges()
+        # await self.vgpc.delete_all_flanges()
         return self # very important!!!
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -138,7 +138,7 @@ class BaseTool(metaclass=Meta):
         if arg < low_bound or arg > up_bound:
             raise InputParameterOutOfBoundary(arg)
 
-    @try_more_times(max_attempts=10, timeout=30, wait_period=1, retry_exception=FileNotFoundError)
+    @try_more_times(max_attempts=10, timeout=30, wait_period=2, retry_exception=FileNotFoundError)
     async def load_tool(self, raw_path):
         await self.vgpc.load_tool(raw_path)
 
@@ -153,12 +153,14 @@ class BaseTool(metaclass=Meta):
         Write asynchronously raw values in the program at the specified nodeids
         """
         params_df = pd.DataFrame(self.params_list, columns=['nodeid', 'raw_val'])
-        # Divide DataFrame in chunks in order to make not too many asynchronous request
-        params_df_list = [params_df[i:i + MAX_ASYNC_REQUESTS] for i in range(0, params_df.shape[0], MAX_ASYNC_REQUESTS)]
-        for params_df_chunk in params_df_list:
-            print(params_df_chunk)
-            input("PAUSE")
-            await asyncio.gather(*[self.vgpc.write(row[1].nodeid, row[1].raw_val) for row in params_df_chunk.iterrows()]) # row[1] because row[0] is the index
+        for row in params_df.iterrows():
+            nodeid = str(row[1][0])
+            raw_val = str(row[1][1])
+            await self.vgpc.write(nodeid, raw_val)
+        # # Divide DataFrame in chunks in order to make not too many asynchronous request
+        # params_df_list = [params_df[i:i + MAX_ASYNC_REQUESTS] for i in range(0, params_df.shape[0], MAX_ASYNC_REQUESTS)]
+        # for params_df_chunk in params_df_list:
+        #     await asyncio.gather(*[self.vgpc.write(row[1][0], row[1][1]) for row in params_df_chunk.iterrows()]) # row[1] because row[0] is the index
 
     async def get(self, nodeid):
         return await self.vgpc.read(nodeid)
@@ -172,11 +174,14 @@ class BaseTool(metaclass=Meta):
         str_whp_path = str(pthlb_whp_path)
         await self.vgpc.load_wheel(str_whp_path, whp_posn)
 
-    def set_wheel(self, whp_name, whp_posn):
+    def set_wheel(self, whp_name, whp_posn, mode="manufacture"):
         """
         Store wheelpack name and its position in a list
         """
-        self.whp_df.loc[whp_posn] = whp_name
+        if mode == "manufacture" or mode == "regrind":
+            self.whp_df.loc[[whp_posn], ["whp_name", "mode"]] = pd.DataFrame([[whp_name, mode]], columns=["whp_name", "mode"], index=[whp_posn])
+        else:
+            raise ValueError(f"Wrong set_wheel mode: {mode}")
 
     def create_whp_png_shortcut(self, whp_name):
         create_res_shortcut_from_file_name(Config.STD_PNG_DIR, whp_name, Config.PNG_SUFFIX, self.res_prog_dir)
@@ -186,14 +191,18 @@ class BaseTool(metaclass=Meta):
         Load synchronously wheelpacks in the program
         """
         for row in self.whp_df.iterrows():
-            whp_name = row[1].whp_name
             whp_posn = row[0] # row index
+            whp_name = row[1][0]
+            mode = row[1][1]
             # if the position is not empty, the wheelpack is loaded in the program and a shortcut is created
             if is_nan(whp_name):
-                row[1].whp_name = "Empty"
+                row[1][0] = "Empty"
             else:
                 await self.load_wheel(whp_name, whp_posn)
-                self.create_whp_png_shortcut(whp_name)
+                if mode == "manufacture":
+                    self.create_whp_png_shortcut(whp_name)
+                else:
+                    row[1][0] = "Empty"
 
     async def load_isoeasy(self):
         """
@@ -240,10 +249,12 @@ class BaseTool(metaclass=Meta):
             cycle_time_log_df = cycle_time_log_wb.get_first_sh_df()
         except ValueError:
             cycle_time_log_df = pd.DataFrame(columns=CYCLE_TIME_LOG_COLUMNS)
-
-        df_concat = pd.DataFrame([[self.name, self.cycle_time]], columns=CYCLE_TIME_LOG_COLUMNS)
-        cycle_time_log_df = pd.concat([cycle_time_log_df, df_concat], ignore_index=True)
-        cycle_time_log_df.to_excel(self.cycle_time_log_path, index=False)
+        try:
+            df_concat = pd.DataFrame([[self.name, self.cycle_time]], columns=CYCLE_TIME_LOG_COLUMNS)
+            cycle_time_log_df = pd.concat([cycle_time_log_df, df_concat], ignore_index=True)
+            cycle_time_log_df.to_excel(self.cycle_time_log_path, index=False)
+        except PermissionError:
+            _logger.info(f"Could not write time log at {self.cycle_time_log_path}")
 
     async def create(self):
         """
@@ -258,7 +269,7 @@ class BaseTool(metaclass=Meta):
         await self.write_parameters()
         self.set_isoeasy()
         await self.load_isoeasy()
-        await self.calculate_cycle_time()
+        # await self.calculate_cycle_time()
         self.set_datasheet()
         self.write_datasheet()
-        self.write_cycle_time_log()
+        # self.write_cycle_time_log()

@@ -82,5 +82,4 @@ class WorkBook:
         elif err_id == 2:
             raise ValueError("Could not convert column to float or no argument in the worksheet.")
         elif err_id == 3:
-            _logger.error("Could not find the specified workbook.")
             raise ValueError("Could not find the specified workbook.")

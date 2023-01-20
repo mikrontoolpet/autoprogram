@@ -23,7 +23,7 @@ class Tool(BaseTool):
         self.fl_len = float(flute_length)
 
         # Check the input parameters boundary
-        self.check_boundary(self.diam, 1, 6)
+        self.check_boundary(self.diam, 1, 6.4)
 
     async def set_parameters(self):
         # Set parameters
@@ -31,16 +31,14 @@ class Tool(BaseTool):
         step_ang = 45
         self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
-        point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
+        trig_point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
 
         # Blank
         # Profile
-        blank_step_len = self.step_len + point_len
         tot_len = self.configuration_wb.lookup("blank", "diameter", self.diam, "tot_len") + end_stk_rmv
 
         self.set("ns=2;s=tool/Blank/Profile/D0", self.diam)
         self.set("ns=2;s=tool/Blank/Profile/D1", self.step_diam)
-        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
         self.set("ns=2;s=tool/Blank/Profile/L", tot_len)
 
         # Coolant holes
@@ -71,7 +69,7 @@ class Tool(BaseTool):
         # Common Data
         d700 = self.common_wb.lookup("D700", "diameter", self.diam, "D700")
 
-        self.set("ns=2;s=tool/Tool/Reference Length (RL)", self.step_len + 3*self.diam)
+        self.set("ns=2;s=tool/Tool/Reference Length (RL)", self.fl_len + self.diam)
         self.set("ns=2;s=tool/Tool/End Stock Removal (dL)", end_stk_rmv)
         self.set("ns=2;s=tool/Tool/Set 1/Cutting Security Distance", d700)
         self.set("ns=2;s=tool/Tool/Set 2/Cutting Security Distance", d700)
@@ -89,18 +87,21 @@ class Tool(BaseTool):
         # Flute 1
         atk_ang_front_len = self.step_len - 1.15*self.diam
         atk_ang_back_len = self.step_len - 0.15*self.diam
-        atk_ang_front_perc = atk_ang_front_len/(self.fl_len - point_len)*100
-        atk_ang_back_perc = atk_ang_back_len/(self.fl_len - point_len)*100
+        atk_ang_front_perc = round(atk_ang_front_len/(self.fl_len - trig_point_len)*100, 2)
+        atk_ang_back_perc = round(atk_ang_back_len/(self.fl_len - trig_point_len)*100, 2)
         front_dl_start = 0.2
+        s_g1_dl_end = round(0.861*self.diam - 1.022*self.step_diam, 2)
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute Length", self.fl_len)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Lead", self.lead)
 
         # Flute 1 (G1)
         g1_atk_ang_str = "(s1;0%;0.5°);(s1;" + str(atk_ang_front_perc) + "%;0.5°);(s1;" + str(atk_ang_back_perc) + "%;10°);(s1;100%;10°)"
+        g1_dl_end = round(s_g1_dl_end - 0.2*self.diam, 2)
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/dL Start", front_dl_start)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Attack Angle", g1_atk_ang_str)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/dL Start", front_dl_start)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/dL End", g1_dl_end)
 
         # Feeds and speeds
         g1_speed = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G1_speed")
@@ -109,35 +110,41 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Cutting Speed", g1_speed)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 1 (Output)/Feedrate", g1_feedrate)
 
-        # Flute 101 (G2)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", 0.03*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL Start", front_dl_start)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL End", -0.2*self.diam)
-
-        # Feeds and speeds
-        g2_speed = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_speed")
-        g2_feedrate = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_feedrate")
-
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Cutting Speed", g2_speed)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Feedrate", g2_feedrate)
-
-        # Flute 201 (S_G1)
+        # Flute 101 (S_G1)
+        s_g1_rake_shift = round(-0.025*self.diam, 2)
         s_g1_atk_ang_front = self.configuration_wb.lookup("function_data", "diameter", self.diam, "S_G1_attack_angle_front")
         s_g1_atk_ang_back = self.configuration_wb.lookup("function_data", "diameter", self.diam, "S_G1_attack_angle_back")
-        s_g1_atk_ang_str = "(s1;0%;" + str(s_g1_atk_ang_front) + "°);(s1;" + str(atk_ang_front_perc) + "%;" + str(s_g1_atk_ang_front) + "°);(s1;" + str(atk_ang_back_perc) + "%;" + str(s_g1_atk_ang_back) + "°);(s1;100%;" + str(s_g1_atk_ang_back) + "°)"
+        s_g1_atk_ang_str = "(s1;0%;" + str(s_g1_atk_ang_front) + "°);(s1;" + str(atk_ang_front_perc) + "%;" + str(s_g1_atk_ang_front) + "°);\
+                             (s1;" + str(atk_ang_back_perc) + "%;" + str(s_g1_atk_ang_back) + "°);(s1;100%;" + str(s_g1_atk_ang_back) + "°)"
+        s_g1_exit_rad = round(0.5*self.diam, 2)
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Rake Shift", -0.025*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Attack Angle", s_g1_atk_ang_str)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/dL Start", front_dl_start)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/dL End", -0.0638*self.step_diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Exit Radius", 0.5*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", s_g1_rake_shift)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Attack Angle", s_g1_atk_ang_str)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL Start", front_dl_start)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/dL End", s_g1_dl_end)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Exit Radius", s_g1_exit_rad)
 
         # Feeds and speeds
         s_g1_speed = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G1_speed")
         s_g1_feedrate = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G1_feedrate")
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Cutting Speed", s_g1_speed)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Feedrate", s_g1_feedrate)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Cutting Speed", s_g1_speed)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Feedrate", s_g1_feedrate)
+
+        # Flute 1001 (G2)
+        g2_dl_end = round(s_g1_dl_end - 0.2*self.diam, 2)
+
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute Length", self.fl_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Lead", self.lead)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL Start", front_dl_start)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/dL End", g2_dl_end)
+
+        # Feeds and speeds
+        g2_speed = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_speed")
+        g2_feedrate = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_feedrate")
+
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Cutting Speed", g2_speed)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Feedrate", g2_feedrate)
 
         # Step 0
         sc = 0.008*self.diam
@@ -225,10 +232,10 @@ class Tool(BaseTool):
 
         # Step 0 Diameter
         # Step 0 OD Clearance
-        f12_dl_end = self.configuration_wb.trend("function_data", "diameter", self.diam, "F12_dl_end")
+        f1_dl_end = self.configuration_wb.trend("function_data", "diameter", self.diam, "F1_dl_end")
         # OD Clearance 1 (F1)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.076*self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/dL End", f12_dl_end)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Margin Width", 0.06*self.diam)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/dL End", f1_dl_end)
         # Feeds and speeds
         f1_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
         f1_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F1_feedrate")
@@ -237,10 +244,11 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Feedrate", f1_feedrate)
 
         # OD Clearance 101 (F2)
+        f2_dl_end = self.configuration_wb.trend("function_data", "diameter", self.diam, "F2_dl_end")
         f2_marg_width = self.configuration_wb.trend("function_data", "diameter", self.diam, "F2_margin_width")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Margin Width", f2_marg_width)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/dL End", f12_dl_end)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/dL End", f2_dl_end)
         # Feeds and speeds
         f2_speed = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_speed")
         f2_feedrate = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F2_feedrate")
@@ -249,25 +257,49 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Feedrate", f2_feedrate)
 
         # Step 1
-        # Step 1 Gash
-        rp_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_web_thickness")
-        rp_yp = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_yp")
-        rp_rot_c = self.configuration_wb.trend("function_data", "diameter", self.diam, "RP_rotation_c")
+        # Delta dL compensation
+        # Delta dL is 0 until wheel segments are not assigned
+        delta_dl = 0 #await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
+        point_len = trig_point_len + delta_dl
+        blank_step_len = self.step_len + point_len
+        rd_gash_z = -(blank_step_len + (self.step_diam - self.diam)/2/math.tan(math.radians(step_ang)))
 
+        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", -blank_step_len)
+
+        # Step 1 Gash (RD)
+        rp_web_thck = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RP_web_thickness")
+        rp_yp = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RP_yp")
+        rp_d = round(1.05*self.step_diam, 2)
+
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/D", rp_d)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dD", self.diam)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Web Thickness", rp_web_thck)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Depth Past Center Yp", rp_yp)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Rotation C", rp_rot_c)
 
-        # Step 1 Step Reliefs
-        gr_radial_relief = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_radial_relief_angle")
-        gr_axial_relief = 13 if self.diam < 3 else 10
-        gr_rot_c = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_rotation_c")
-        gr_depth = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_depth")
+        # Step 1 Step Reliefs (GR)
+        gr_rad_rel = 0.7 if self.diam < 3 else 1
+        gr_ax_rel = 10 if self.diam >= 1.5 else 13
+        gr_dl_start = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_dl_start")
+        gr_rot_c = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_rotation_c")
+        gr_depth = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_depth")
+        gr_infeed_dist = 0.07*self.diam + 0.18
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Radial Relief Angle", gr_radial_relief)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Axial Relief Angle", gr_axial_relief)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Radial Relief Angle", gr_rad_rel)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Axial Relief Angle", gr_ax_rel)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/dL Start", gr_dl_start)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Rotation C", gr_rot_c)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Depth", gr_depth)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Infeed Distance", gr_infeed_dist)
+
+        # Feeds and speeds
+        gr_speed = self.configuration_wb.lookup("step_relief", "diameter", self.diam, "GR_speed")
+        gr_feedrate_in = self.configuration_wb.lookup("step_relief", "diameter", self.diam, "GR_feedrate_in")
+        gr_feedrate = self.configuration_wb.lookup("step_relief", "diameter", self.diam, "GR_feedrate")
+
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Cutting Speed", gr_speed)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Feedrate In", gr_feedrate_in)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Feedrate", gr_feedrate)
 
         # Set 2
         # OD Profile 2D
@@ -330,16 +362,14 @@ class Tool(BaseTool):
         # Set wheel segments for wheelpack 1
         # S_G1
         op_wh_seg = self.configuration_wb.lookup("roughing_flutes", "diameter", self.diam, "S_G1_wheel")
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 201/Wheel", op_wh_seg)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Wheel", op_wh_seg)
 
         # F1
         op_wh_seg = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_wheel")
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 1/Wheel", op_wh_seg)
 
         # F2
-        op_wh_seg = self.configuration_wb.lookup("od_clearance", "diameter", self.diam, "F12_wheel")
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Wheel", op_wh_seg)
-
         # Set wheel segments for wheelpack 2
         # S1
         op_wh_seg = self.configuration_wb.lookup("gashes", "diameter", self.diam, "S1_wheel")
@@ -389,7 +419,7 @@ class Tool(BaseTool):
 
         # G2
         op_wh_seg = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_wheel")
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Wheel", op_wh_seg)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Wheel", op_wh_seg)
 
     def set_isoeasy(self):
         """
@@ -401,4 +431,23 @@ class Tool(BaseTool):
         """
         Write additional information on datasheet
         """
-        pass
+        # Text
+        sm = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "sm")
+        vf = self.configuration_wb.lookup("datasheet", "diameter", self.diam, "vf")
+
+        rl_text = "RL: cone end + 2 mm"
+        sm_text = "SM: " + str(sm) + " mm"
+        vf_text = "VF: " + str(vf) + " mm"
+        coolant_text = "Attention to the coolant pipes position!!!"
+
+        self.ds_text_args.append(rl_text)
+        self.ds_text_args.append(sm_text)
+        self.ds_text_args.append(vf_text)
+        self.ds_text_args.append(coolant_text)
+
+        # Images
+        steadyrest_img_name = "steadyrest_setup"
+        coolant_img_name = "coolant_setup"
+
+        self.ds_img_names.append(steadyrest_img_name)
+        self.ds_img_names.append(coolant_img_name)

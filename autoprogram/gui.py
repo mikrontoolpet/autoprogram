@@ -81,7 +81,11 @@ class InitializingPage(tk.Frame):
 
     def run(self):
         InitializingPage.family_dict = {}
-        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.ptc.Tool, tools.drills.drills.ic.Tool, tools.drills.drills.xl.Tool, tools.drills.step_drills.ic.Tool, tools.drills.step_drills.atc.Tool): # new tool classes must be added here
+        for T in (tools.drills.drills.atc.Tool, tools.drills.drills.atc_regrind.Tool, \
+        tools.drills.drills.ptc.Tool, tools.drills.drills.ptc_regrind.Tool,tools.drills.drills.ic.Tool, tools.drills.drills.xl_regrind.Tool, \
+        tools.drills.step_drills.ic.Tool, tools.drills.step_drills.atc.Tool, \
+        tools.drills.step_drills.atc_regrind.Tool): # new tool classes must be added here
+
             InitializingPage.family_dict[T.family_address] = T
         self.init_label.config(text="Tool families initialized!")
 
@@ -207,7 +211,7 @@ class InsertArgumentsPage(tk.Frame):
         tool_name_entry = ttk.Entry(self, textvariable=self.ui_name, width=20)
         tool_name_entry.grid(row=1, column=1, padx=4, pady=4)
         # Inspect tool class input arguments
-        self.tool_cls_args = inspect.getargspec(SelectFamilyPage.ToolClass.__init__).args[3::] # get selected tool class arguments
+        self.tool_cls_args = inspect.getfullargspec(SelectFamilyPage.ToolClass.__init__).args[3::] # get selected tool class arguments
         # Grid corrsponding labels and entries
         for idx, arg in enumerate(self.tool_cls_args):
             arg_label = tk.Label(self, width=20, text=arg)
@@ -264,16 +268,16 @@ class CreatePage(tk.Frame):
         asyncio.run(self.vgpw.__aexit__(None, None, None))
 
     async def run_coroutine(self):
-        try:
-            if SelectModePage.mode == Config.MODES[0]: # manual
-                await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
-            elif SelectModePage.mode == Config.MODES[1]: # auto
-                await self.create_many_tools()
-        except Exception as e:
-            messagebox.showerror("Autoprogram Error", e)
-            _logger.error(e)
+        # try: # Comment here when in test mode!!
+        if SelectModePage.mode == Config.MODES[0]: # manual
+            await self.create_one_tool(InsertArgumentsPage.tool_name, InsertArgumentsPage.ui_entries_list)
+        elif SelectModePage.mode == Config.MODES[1]: # auto
+            await self.create_many_tools()
+        # except Exception as e: # Comment here when in test mode!!
+            # messagebox.showerror("Autoprogram Error", e) # Comment here when in test mode!!
+            # _logger.error(e) # Comment here when in test mode!!
 
-    @try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=Exception)
+    #@try_more_times(max_attempts=5, timeout=800, wait_period=1, retry_exception=Exception) # Comment here when in test mode!!
     async def create_one_tool(self, name, params_list):
         async with VgpWrapper(SelectFamilyPage.ToolClass.machine) as self.vgpw:
             async with SelectFamilyPage.ToolClass(self.vgpw.vgp_client, name, *params_list) as tool: # tool is an instance of the ToolFamily class

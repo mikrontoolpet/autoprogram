@@ -22,7 +22,7 @@ def try_more_times(max_attempts=5, timeout=600, wait_period=1, retry_exception=E
 
             while (not successful) and (attempt <= max_attempts):
                 try:
-                    res = await asyncio.wait_for(coro(*args, **kwargs), timeout)
+                    res = await asyncio.wait_for(coro(*args, **kwargs), timeout) # run coroutine with a timeout
                     successful = True
                     return res
                 except retry_exception as e:

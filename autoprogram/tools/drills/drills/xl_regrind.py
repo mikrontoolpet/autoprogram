@@ -15,7 +15,7 @@ class Tool(BaseTool):
        master program directory itself
     2) The relative module path between the module "tools" and this class
     """
-    family_address = "drills/drills/xl"
+    family_address = "drills/drills/xl_regrind"
     machine = "R628XW"
 
     def __init__(self, vgp_client, name, diameter):

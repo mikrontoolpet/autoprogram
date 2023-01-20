@@ -14,7 +14,7 @@ class Config(object):
 	VGP_SUFFIX = ".vgp"
 	ISOEASY_SUFFIX = ".vgpx"
 	SERVER_URL = "opc.tcp://localhost:8996/"
-	MASTER_PROG_DIR = "master_programs"
+	MASTER_PROG_DIR = "master_program"
 	COMMON_FILE_DIR = "common"
 	ISOEASY_DIR = "isoeasy"
 	IMAGES_DIR = "images"
@@ -26,7 +26,7 @@ class Config(object):
 	ADD_CHARS = "[°¦m¦mm¦s¦/¦min¦%¦ ]"
 	CREATE_WHP_SUFFIX = " Create"
 	COMMON_WB_PATH = Path(MASTER_PROGS_BASE_DIR).joinpath(COMMON_FILE_DIR, COMMON_FILE_NAME)
-	VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.34.3/bin/VirtualGrindPro.exe"
+	VGPRO_EXE_PATH = "C:/Program Files (x86)/ROLLOMATIC/VirtualGrindPro/1.36.4/bin/VirtualGrindPro.exe"
 	R628XW_ID = "R628XW"
 	R628XW_ARG = "../MachinesRes/Machines/Cnc628xw/v7.0.37.0/cnc628xw.rds"
 	MACHINE_ARG_DICT = {}
