@@ -25,13 +25,13 @@ class Tool(BaseTool):
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.4)
 
-    async def set_parameters(self):
+    def set_parameters(self):
         # Set parameters
         point_ang = 143
         step_ang = 45
         self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
-        trig_point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
+        self.trig_point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
 
         # Blank
         # Profile
@@ -87,8 +87,8 @@ class Tool(BaseTool):
         # Flute 1
         atk_ang_front_len = self.step_len - 1.15*self.diam
         atk_ang_back_len = self.step_len - 0.15*self.diam
-        atk_ang_front_perc = round(atk_ang_front_len/(self.fl_len - trig_point_len)*100, 2)
-        atk_ang_back_perc = round(atk_ang_back_len/(self.fl_len - trig_point_len)*100, 2)
+        atk_ang_front_perc = round(atk_ang_front_len/(self.fl_len - self.trig_point_len)*100, 2)
+        atk_ang_back_perc = round(atk_ang_back_len/(self.fl_len - self.trig_point_len)*100, 2)
         front_dl_start = 0.2
         s_g1_dl_end = round(0.861*self.diam - 1.022*self.step_diam, 2)
 
@@ -114,8 +114,7 @@ class Tool(BaseTool):
         s_g1_rake_shift = round(-0.025*self.diam, 2)
         s_g1_atk_ang_front = self.configuration_wb.lookup("function_data", "diameter", self.diam, "S_G1_attack_angle_front")
         s_g1_atk_ang_back = self.configuration_wb.lookup("function_data", "diameter", self.diam, "S_G1_attack_angle_back")
-        s_g1_atk_ang_str = "(s1;0%;" + str(s_g1_atk_ang_front) + "°);(s1;" + str(atk_ang_front_perc) + "%;" + str(s_g1_atk_ang_front) + "°);\
-                             (s1;" + str(atk_ang_back_perc) + "%;" + str(s_g1_atk_ang_back) + "°);(s1;100%;" + str(s_g1_atk_ang_back) + "°)"
+        s_g1_atk_ang_str = "(s1;0%;" + str(s_g1_atk_ang_front) + "°);(s1;" + str(atk_ang_front_perc) + "%;" + str(s_g1_atk_ang_front) + "°);(s1;" + str(atk_ang_back_perc) + "%;" + str(s_g1_atk_ang_back) + "°);(s1;100%;" + str(s_g1_atk_ang_back) + "°)"
         s_g1_exit_rad = round(0.5*self.diam, 2)
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1/Flute 101/Rake Shift", s_g1_rake_shift)
@@ -257,16 +256,6 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Feedrate", f2_feedrate)
 
         # Step 1
-        # Delta dL compensation
-        # Delta dL is 0 until wheel segments are not assigned
-        delta_dl = 0 #await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
-        point_len = trig_point_len + delta_dl
-        blank_step_len = self.step_len + point_len
-        rd_gash_z = -(blank_step_len + (self.step_diam - self.diam)/2/math.tan(math.radians(step_ang)))
-
-        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", -blank_step_len)
-
         # Step 1 Gash (RD)
         rp_web_thck = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RP_web_thickness")
         rp_yp = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RP_yp")
@@ -337,6 +326,15 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 1/Relief 1/Cutting Speed", sm_speed)
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 1/Relief 1/Feedrate In", sm_feedrate_in)
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 1/Relief 1/Feedrate", sm_feedrate)
+
+    async def set_delta_dl_compensation(self):
+        # Delta dL compensation
+        delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
+        point_len = self.trig_point_len + delta_dl
+        blank_step_len = self.step_len + point_len
+
+        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", -blank_step_len)
 
     def set_wheels(self):
         """

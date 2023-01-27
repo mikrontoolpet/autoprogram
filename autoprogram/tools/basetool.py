@@ -256,16 +256,25 @@ class BaseTool(metaclass=Meta):
         except PermissionError:
             _logger.info(f"Could not write time log at {self.cycle_time_log_path}")
 
+    async def set_delta_dl_compensation(self):
+        """
+        This method is overridden in case delta dl compensation is needed (e.g. in pilot drills)
+        """
+        pass
+
     async def create(self):
         """
         Wrap the methods necessary to create the tool
         """
-        await self.set_parameters()
+        self.set_parameters()
         await self.write_parameters()
         self.set_wheels()
         await self.load_wheels()
         self.params_list = [] # needed by set_wheel_segments to have an empty list to append to
         self.set_wheel_segments()
+        await self.write_parameters()
+        self.params_list = [] # needed by set_delta_dl_compensation to have an empty list to append to
+        await self.set_delta_dl_compensation()
         await self.write_parameters()
         self.set_isoeasy()
         await self.load_isoeasy()

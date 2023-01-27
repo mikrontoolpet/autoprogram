@@ -16,9 +16,7 @@ WHP_POSN_ARGS = ("VGP_Guid", "G_Type", "Rollomatic.Common.MetaLibrary.Flange", "
 
 SUB_PERIOD = 100 # [ms], the variable ApplicationStateHandler.app_state is read and updated every <SUB_PERIOD> milliseconds (server communication cycle time)
 APP_STATE_CHECK_PERIOD = 0.2 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
-APP_STATE_INIT_WAIT_TIME = 1.2 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
-# APP_STATE_CHECK_PERIOD_WHEEL = 0.5 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
-# APP_STATE_INIT_WAIT_TIME_WHEEL = 1 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
+APP_STATE_INIT_WAIT_TIME = 0.4 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 
 REQUEST_TIMEOUT = 120 # [s], it's the max time a connection can last
 CONNECTION_START_ATTEMPT_TIMEOUT = 60 # [s], it's the max time the connection is attempted to be started
