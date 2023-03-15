@@ -26,7 +26,7 @@ class Tool(BaseTool):
         # Check the input parameters boundary
         self.check_boundary(self.diam, 1, 6.35)
 
-    async def set_parameters(self):
+    def set_parameters(self):
         # Set parameters
         point_ang = 144
         step_ang = 45
@@ -223,7 +223,7 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Point Relief/Relief 101/Point Relief 102/Feedrate", s_p2_feedrate)
 
         # Step 0 Diameter
-        delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
+        # delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
         point_len = trig_point_len + delta_dl
 
         # Step 0 OD Clearance

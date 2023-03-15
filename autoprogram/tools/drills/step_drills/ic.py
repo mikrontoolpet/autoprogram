@@ -257,21 +257,21 @@ class Tool(BaseTool):
 
         # Step 1
         # Step 1 Gash (RD)
-        rp_web_thck = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RP_web_thickness")
-        rp_yp = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RP_yp")
-        rp_d = round(1.05*self.step_diam, 2)
+        rD_web_thck = self.configuration_wb.trend("function_data", "diameter", self.diam, "RD_web_thickness")
+        rD_yp = self.configuration_wb.trend("function_data", "diameter", self.diam, "RD_yp")
+        rD_d = round(1.1*self.step_diam, 2)
 
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/D", rp_d)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/D", rD_d)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dD", self.diam)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Web Thickness", rp_web_thck)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Depth Past Center Yp", rp_yp)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Web Thickness", rD_web_thck)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Depth Past Center Yp", rD_yp)
 
         # Step 1 Step Reliefs (GR)
         gr_rad_rel = 0.7 if self.diam < 3 else 1
         gr_ax_rel = 10 if self.diam >= 1.5 else 13
         gr_dl_start = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_dl_start")
         gr_rot_c = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_rotation_c")
-        gr_depth = self.configuration_wb.lookup("function_data", "diameter", self.diam, "GR_depth")
+        gr_depth = self.configuration_wb.trend("function_data", "diameter", self.diam, "GR_depth")
         gr_infeed_dist = 0.07*self.diam + 0.18
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Step Reliefs/Radial Relief Angle", gr_rad_rel)
@@ -327,15 +327,6 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 1/Relief 1/Feedrate In", sm_feedrate_in)
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 1/Relief 1/Feedrate", sm_feedrate)
 
-    async def set_delta_dl_compensation(self):
-        # Delta dL compensation
-        delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
-        point_len = self.trig_point_len + delta_dl
-        blank_step_len = self.step_len + point_len
-
-        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", -blank_step_len)
-
     def set_wheels(self):
         """
         Load wheelpacks and set wheel segments
@@ -349,8 +340,8 @@ class Tool(BaseTool):
         self.set_wheel(whp_name, 2)
 
         # Load wheelpack 3
-        whp_name = self.configuration_wb.lookup("wheelpacks_1_5", "diameter", self.diam, "wheelpack_3")
-        self.set_wheel(whp_name, 3)
+        whp_name = self.configuration_wb.lookup("wheelpacks_1_5", "diameter", self.diam, "wheelpack_4")
+        self.set_wheel(whp_name, 4)
 
         # Load wheelpack 6
         whp_name = self.configuration_wb.lookup("wheelpack_6", "diameter", self.diam, "wheelpack_6")
@@ -402,8 +393,8 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 2/Reliefs/Relief Section 1/Relief 1/Wheel", op_wh_seg)
 
         # Set wheel segments for wheelpack 3
-        # RP
-        op_wh_seg = self.configuration_wb.lookup("gashes", "diameter", self.diam, "RP_wheel")
+        # RD
+        op_wh_seg = self.configuration_wb.lookup("gashes", "diameter", self.diam, "RD_wheel")
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Wheel", op_wh_seg)
 
         # GR
@@ -418,6 +409,15 @@ class Tool(BaseTool):
         # G2
         op_wh_seg = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_wheel")
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Wheel", op_wh_seg)
+
+    async def set_delta_dl_compensation(self):
+        # Delta dL compensation
+        delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
+        point_len = self.trig_point_len + delta_dl
+        blank_step_len = self.step_len + point_len
+
+        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", -blank_step_len)
 
     def set_isoeasy(self):
         """

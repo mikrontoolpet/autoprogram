@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger(__name__)
 
 
-def try_more_times(max_attempts=5, timeout=600, wait_period=1, retry_exception=Exception):
+def try_more_times(max_attempts=5, timeout=6000, wait_period=1, retry_exception=Exception):
     """
     This decorator tries mor time to await a coroutine in case of a specific
     exception, given a timeout and a retry period.

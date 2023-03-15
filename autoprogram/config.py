@@ -3,8 +3,8 @@ from pathlib import Path
 class Config(object):
 	MASTER_PROGS_BASE_DIR = r"\\mikron.net\Group\MT\Common\MTI_Production-Engineering-Team\AUTOPROGRAM\master_progs_base_dir"
 	RES_PROGS_DIR = "C:/RES"
-	WHILE_WAIT_PERIOD = 1.2 # seconds
-	APP_STATE_SUB_PERIOD = 100 # milliseconds
+	# WHILE_WAIT_PERIOD = 1.2 # seconds
+	# APP_STATE_SUB_PERIOD = 100 # milliseconds
 	STD_WHP_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWS_R628XW\Create"
 	STD_PNG_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWS_R628XW\PNG"
 	# CUST_WHP_DIR = r"\\mikron.net\Group\MT\MTO\Common\Articoli_Mikron_Tool_International\Wheel_Packs\PWI_R628XW\Create"

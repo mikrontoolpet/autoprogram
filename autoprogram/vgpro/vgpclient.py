@@ -18,7 +18,7 @@ SUB_PERIOD = 100 # [ms], the variable ApplicationStateHandler.app_state is read 
 APP_STATE_CHECK_PERIOD = 0.2 # [s], while waiting the application to be ready, the ApplicationStateHandler.app_state is checked every <APP_STATE_CHECK_PERIOD> seconds
 APP_STATE_INIT_WAIT_TIME = 0.4 # [s], initial time to let the ApplicationStateHandler.app_state to change value (must be higher than APP_STATE_CHECK_PERIOD)
 
-REQUEST_TIMEOUT = 120 # [s], it's the max time a connection can last
+REQUEST_TIMEOUT = 36000 # [s], it's the max time a connection can last
 CONNECTION_START_ATTEMPT_TIMEOUT = 60 # [s], it's the max time the connection is attempted to be started
 CONNECTION_START_ATTEMPT_PERIOD = 1 # [s]
 
