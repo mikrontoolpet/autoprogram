@@ -32,16 +32,14 @@ class Tool(BaseTool):
         step_ang = 45
         self.lead = self.configuration_wb.lookup("blank", "diameter", self.diam, "lead")
         end_stk_rmv = self.common_wb.lookup("end_stock", "diameter", self.diam, "end_stock")
-        trig_point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
+        self.trig_point_len = (self.diam/2)/math.tan(math.radians(point_ang/2))
 
         # Blank
         # Profile
-        blank_step_len = self.step_len + trig_point_len
         tot_len = self.fl_len + 2*self.diam
 
         self.set("ns=2;s=tool/Blank/Profile/D0", self.diam)
         self.set("ns=2;s=tool/Blank/Profile/D1", self.step_diam)
-        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
         self.set("ns=2;s=tool/Blank/Profile/L", tot_len)
 
         # Coolant holes
@@ -326,22 +324,17 @@ class Tool(BaseTool):
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Cutting Speed", f12_speed)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Step 0 Diameter/Step 0 OD Clearance/OD Clearance 101/Feedrate", f12_feedrate)
 
-        # # Step 1
-        # delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
-        point_len = trig_point_len + delta_dl
-        
-        # # Step 1 Gash (RD)
+        # Step 1
+        # Step 1 Gash (RD)
         rd_index = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_index")
         rd_d = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_d")
         rd_dd = self.diam
-        rd_dz = -(self.step_len + point_len)
         rd_web_thckn = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_web_thickness")
         rd_yp = self.configuration_wb.lookup("function_data", "diameter", self.diam, "RD_yp")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Index", rd_index)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/D", rd_d)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dD", rd_dd)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", rd_dz)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Web Thickness", rd_web_thckn)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Depth Past Center Yp", rd_yp)
 
@@ -480,6 +473,18 @@ class Tool(BaseTool):
         # G2
         op_wh_seg = self.configuration_wb.lookup("polishing_flutes", "diameter", self.diam, "G2_wheel")
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Flutes/Flute 1001/Flute 1 (Output)/Wheel", op_wh_seg)
+
+    async def set_delta_dl_compensation(self):
+        """
+        This method is overridden in case delta dl compensation is needed (e.g. in pilot drills)
+        """
+        delta_dl = await self.get("ns=2;s=tool/Tool/Set 1/Delta dL (Output)")
+        point_len = self.trig_point_len + delta_dl
+        blank_step_len = self.step_len + self.trig_point_len
+        rd_dz = -(self.step_len + point_len)
+        
+        self.set("ns=2;s=tool/Blank/Profile/sP1", blank_step_len)
+        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 1/Step 1 Gash/Virtual Profile/dZ", rd_dz)
 
     def set_isoeasy(self):
         """
