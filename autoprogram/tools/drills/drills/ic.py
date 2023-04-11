@@ -179,11 +179,9 @@ class Tool(BaseTool):
         # Feeds and speeds
         tn1_speed = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_speed")
         tn1_feedrate_in = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_feedrate_in")
-        tn1_feedrate = self.configuration_wb.lookup("gashes", "diameter", self.diam, "TN1_feedrate")
 
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Straight Gash/Cutting Speed", tn1_speed)
         self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Straight Gash/Feedrate In", tn1_feedrate_in)
-        self.set("ns=2;s=tool/Tool/Set 1/Common Data/Step 0 (Point)/Gash/Gash 201/Straight Gash/Feed along sweep+exit", tn1_feedrate)
 
         # Point Relief
         # Relief 1
